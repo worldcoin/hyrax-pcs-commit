@@ -1,3 +1,6 @@
+use core::slice;
+use halo2_base::utils::ScalarField;
+use num_traits::sign;
 use rand_core::RngCore;
 use remainder_shared_types::{
     halo2curves::{bn256::G1 as Bn256, group::ff::Field, CurveExt},
@@ -58,6 +61,8 @@ pub trait PrimeOrderCurve:
 
     /// Return the affine coordinates of the point, if it is not at the identity (in which case, return None).
     fn affine_coordinates(&self) -> Option<(Self::Base, Self::Base)>;
+
+    fn from_random_bytes(bytes: &[u8]) -> Option<Self>;
 }
 
 impl PrimeOrderCurve for Bn256 {
@@ -74,6 +79,38 @@ impl PrimeOrderCurve for Bn256 {
 
     fn random(rng: impl RngCore) -> Self {
         <Bn256 as Group>::random(rng)
+    }
+
+    fn from_random_bytes(bytes: &[u8]) -> Option<Self> {
+        if bytes.len() != 68 {
+            return None;
+        }
+        let x_bytes = &bytes[..64];
+        let x = Self::Base::from_bytes_le(x_bytes);
+
+        let sliced_sign_bytes = &bytes[64..68];
+        let mut sign_bytes = [0_u8; 4];
+        sign_bytes.copy_from_slice(sliced_sign_bytes);
+        let lastu32 = u32::from_le_bytes(sign_bytes);
+        let y_sign = (lastu32 % 2) as u8;
+        let y2 = x.square() * x + Self::Base::from(3);
+
+        if let Some(y_arb_sign) = Option::<Self::Base>::from(y2.sqrt()) {
+            let arb_sign = y_arb_sign.to_bytes()[0] & 1;
+            let y = if y_sign ^ arb_sign == 0 {
+                y_arb_sign
+            } else {
+                -y_arb_sign
+            };
+            let rand_point = Bn256 {
+                x,
+                y,
+                z: Self::Base::one(),
+            };
+            Some(rand_point)
+        } else {
+            None
+        }
     }
 
     fn double(&self) -> Self {

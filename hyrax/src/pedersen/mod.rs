@@ -1,9 +1,9 @@
 use super::curves::PrimeOrderCurve;
+use blake2::{Blake2s256, Digest};
 use itertools::Itertools;
-use rand::Rng;
-
-pub mod tests;
 use num_traits::PrimInt;
+use rand::Rng;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
 /// For committing to vectors of integers and scalars using the Pedersen commitment scheme.
 pub struct PedersenCommitter<C: PrimeOrderCurve> {
@@ -26,67 +26,58 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
     /// Post: self.message_generators.len() == max_message_length
     /// TODO(vishady): look at the halo2curves C::random
     /// TODO(vishady): benchmarks on the hash function for rng
-    pub fn random(
-        max_message_length: usize,
-        mut rng: &mut impl Rng,
-        int_abs_val_bitwidth: Option<usize>,
-    ) -> Self {
-        let message_generators: Vec<C> = (0..max_message_length)
-            .map(|_| C::random(&mut rng))
-            .collect_vec();
-        let blinding_generator = C::random(&mut rng);
-        Self::new(message_generators, blinding_generator, int_abs_val_bitwidth)
-    }
-
-    /// Create a new PedersenCommitter with the provided generators.
-    /// See [PedersenCommitter].
-    /// DEFAULT_INT_ABS_VAL_BITWIDTH is used for `int_abs_val_bitwidth` if None is provided.
     pub fn new(
-        message_generators: Vec<C>,
-        blinding_generator: C,
+        num_generators: usize,
+        public_string: &str,
         int_abs_val_bitwidth: Option<usize>,
     ) -> Self {
+        let all_generators = Self::sample_generators(num_generators + 1, public_string);
+        let blinding_generator_h = all_generators[0];
+        let message_generators_g_i = all_generators[1..].to_vec();
+
         let int_abs_val_bitwidth =
             int_abs_val_bitwidth.unwrap_or(Self::DEFAULT_INT_ABS_VAL_BITWIDTH);
-        let message_generator_doublings: Vec<Vec<C>> = message_generators
+        let message_generator_doublings: Vec<Vec<C>> = message_generators_g_i
             .clone()
             .into_iter()
             .map(|gen| precompute_doublings(gen, int_abs_val_bitwidth))
             .collect();
+
         Self {
-            message_generators,
-            blinding_generator,
+            message_generators: message_generators_g_i,
+            blinding_generator: blinding_generator_h,
             int_abs_val_bitwidth,
             message_generator_doublings,
         }
     }
 
-    /// Create a pair of new PedersenCommitters that share the same (original) blinding generator
-    /// but that split the message generators between them.
-    /// Split is such that first gets generators 0..split_index and second gets generators split_index..end.
-    /// Useful in proof of dot product where we need to use the same h to commit to \vec{x} and y.
-    /// Pre: 0 <= split_index <= self.message_generators.len()
-    /// Post: self.message_generators == first.message_generators concat second_commit.message_generators
-    /// Post: self, first and second have the same blinding_generator and int_abs_val_bitwidth
-    pub fn split_at(&self, split_index: usize) -> (Self, Self) {
-        let mut message_generators_first = self.message_generators.clone();
-        let message_generators_second = message_generators_first.split_off(split_index);
-        let mut message_doublings_first = self.message_generator_doublings.clone();
-        let message_doublings_second = message_doublings_first.split_off(split_index);
+    fn sample_generators(num_generators: usize, public_string: &str) -> Vec<C> {
+        let generators: Vec<_> = ark_std::cfg_into_iter!(0..num_generators)
+            .map(|i| {
+                let i = i as u64;
+                let public_string_as_bytes = public_string.as_bytes();
+                let hash = &Blake2s256::digest(
+                    [public_string_as_bytes, &i.to_le_bytes()]
+                        .concat()
+                        .as_slice(),
+                )[..68];
+                let mut g = C::from_random_bytes(&hash);
+                let mut j = 0u64;
+                while g.is_none() {
+                    // PROTOCOL NAME, i, j
+                    let mut bytes = public_string_as_bytes.to_vec();
+                    bytes.extend(i.to_le_bytes());
+                    bytes.extend(j.to_le_bytes());
+                    let hash = &Blake2s256::digest(bytes.as_slice())[..68];
+                    g = C::from_random_bytes(&hash);
+                    j += 1;
+                }
+                let generator = g.unwrap();
+                generator
+            })
+            .collect();
 
-        let first_commit = Self {
-            message_generators: message_generators_first,
-            blinding_generator: self.blinding_generator,
-            int_abs_val_bitwidth: self.int_abs_val_bitwidth,
-            message_generator_doublings: message_doublings_first,
-        };
-        let second_commit = Self {
-            message_generators: message_generators_second,
-            blinding_generator: self.blinding_generator,
-            int_abs_val_bitwidth: self.int_abs_val_bitwidth,
-            message_generator_doublings: message_doublings_second,
-        };
-        (first_commit, second_commit)
+        generators
     }
 
     /// Commits to the vector of u8s using the specified blinding factor.
@@ -94,21 +85,9 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
     /// Convient wrapper of integer_vector_commit.
     /// Pre: self.int_abs_val_bitwidth >= 8.
     /// Post: same result as vector_commit, assuming uints are smaller than scalar field order.
-    pub fn u8_vector_commit(&self, message: &Vec<u8>, blinding: &C::Scalar) -> C {
+    pub fn u8_vector_commit(&self, message: &[u8], blinding: &C::Scalar) -> C {
         debug_assert!(self.int_abs_val_bitwidth >= 8);
         let message_is_negative_bits = vec![false; message.len()];
-        self.integer_vector_commit(&message, &message_is_negative_bits, blinding)
-    }
-
-    /// Commits to the vector of i8s using the specified blinding factor.
-    /// Uses the precomputed generator powers and the binary decomposition.
-    /// Convient wrapper of integer_vector_commit.
-    /// Pre: self.int_abs_val_bitwidth >= 8.
-    /// Post: same result as vector_commit, assuming ints are smaller than scalar field order.
-    pub fn i8_vector_commit(&self, message: &Vec<i8>, blinding: &C::Scalar) -> C {
-        debug_assert!(self.int_abs_val_bitwidth >= 8);
-        let message_is_negative_bits = message.into_iter().map(|x| *x < 0i8).collect();
-        let message: Vec<u8> = message.iter().map(|x| (*x as i16).abs() as u8).collect(); // convert i8 to i16 first so that .abs() doesn't fail for i8::MIN
         self.integer_vector_commit(&message, &message_is_negative_bits, blinding)
     }
 
@@ -119,7 +98,7 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
     /// Pre: message.len() <= self.message_generators.len()
     pub fn integer_vector_commit<T: PrimInt>(
         &self,
-        message: &Vec<T>,
+        message: &[T],
         message_is_negative_bits: &Vec<bool>,
         blinding: &C::Scalar,
     ) -> C {
@@ -152,27 +131,6 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
             .fold(C::zero(), |acc, value| acc + value);
 
         unblinded_commit + self.blinding_generator * *blinding
-    }
-
-    /// Commit to the provided vector using the specified blinding factor.
-    /// The first message.len() generators are used to commit to the message.
-    /// Note that self.int_abs_val_bitwidth is not relevant here.
-    /// Pre: message.len() <= self.message_generators.len()
-    pub fn vector_commit(&self, message: &Vec<C::Scalar>, blinding: &C::Scalar) -> C {
-        assert!(message.len() <= self.message_generators.len());
-        let unblinded_commit = self
-            .message_generators
-            .iter()
-            .zip(message.iter())
-            .fold(C::zero(), |acc, (gen, input)| acc + (*gen * *input));
-        unblinded_commit + self.blinding_generator * *blinding
-    }
-
-    /// Commit to the provided scalar using the specified blinding factor.
-    /// Note that self.int_abs_val_bitwidth is not relevant here.
-    /// Pre: self.message_generators.len() >= 1
-    pub fn scalar_commit(&self, message: &C::Scalar, blinding: &C::Scalar) -> C {
-        self.message_generators[0] * *message + self.blinding_generator * *blinding
     }
 }
 
