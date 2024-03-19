@@ -1,6 +1,5 @@
 use super::curves::PrimeOrderCurve;
 use crate::pedersen::PedersenCommitter;
-use ark_std::log2;
 use itertools::Itertools;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
@@ -20,10 +19,7 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
     // the number of blidning factors needed, which is exactly the number of rows in the matrix
     let num_blinding_factors_needed = log2(input_layer_mle.len() / (1 << log_split_point));
     // checking that the matrix row size and the matrix column size are both powers of two! otherwise hyrax does not work
-    assert_eq!(
-        (1 << num_blinding_factors_needed) * (1 << log_split_point),
-        input_layer_mle.len() as u32
-    );
+    assert!(input_layer_mle.len().is_power_of_two());
 
     // let mut seed = [0u8; 32];
     // OsRng.fill_bytes(&mut seed);

@@ -1,6 +1,3 @@
 [workspace]
 
 members = ["hyrax"]
-
-[patch."https://github.com/privacy-scaling-explorations/halo2curves"]
-halo2curves = { git = "https://github.com/axiom-crypto/halo2.git", tag = "v2023_04_06" }
