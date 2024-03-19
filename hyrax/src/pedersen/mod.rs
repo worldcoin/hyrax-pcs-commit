@@ -1,9 +1,7 @@
 use super::curves::PrimeOrderCurve;
-use blake2::{Blake2s256, Digest};
-use itertools::Itertools;
 use num_traits::PrimInt;
-use rand::Rng;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rand::SeedableRng;
+use rand_chacha::ChaCha20Rng;
 
 /// For committing to vectors of integers and scalars using the Pedersen commitment scheme.
 pub struct PedersenCommitter<C: PrimeOrderCurve> {
@@ -52,30 +50,11 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
     }
 
     fn sample_generators(num_generators: usize, public_string: &str) -> Vec<C> {
-        let generators: Vec<_> = ark_std::cfg_into_iter!(0..num_generators)
-            .map(|i| {
-                let i = i as u64;
-                let public_string_as_bytes = public_string.as_bytes();
-                let hash = &Blake2s256::digest(
-                    [public_string_as_bytes, &i.to_le_bytes()]
-                        .concat()
-                        .as_slice(),
-                )[..68];
-                let mut g = C::from_random_bytes(&hash);
-                let mut j = 0u64;
-                while g.is_none() {
-                    // PROTOCOL NAME, i, j
-                    let mut bytes = public_string_as_bytes.to_vec();
-                    bytes.extend(i.to_le_bytes());
-                    bytes.extend(j.to_le_bytes());
-                    let hash = &Blake2s256::digest(bytes.as_slice())[..68];
-                    g = C::from_random_bytes(&hash);
-                    j += 1;
-                }
-                let generator = g.unwrap();
-                generator
-            })
-            .collect();
+        assert!(public_string.len() >= 32);
+        let mut public_string_array: [u8; 32] = [0; 32];
+        public_string_array.copy_from_slice(&public_string.as_bytes()[..32]);
+        let mut prng = ChaCha20Rng::from_seed(public_string_array);
+        let generators: Vec<_> = (0..num_generators).map(|_| C::random(&mut prng)).collect();
 
         generators
     }

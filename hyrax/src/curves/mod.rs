@@ -1,9 +1,7 @@
-use core::slice;
-use halo2_base::utils::ScalarField;
-use num_traits::sign;
-use rand_core::RngCore;
-use halo2curves::{bn256::G1 as Bn256, group::ff::Field, CurveExt};
 use halo2_base::utils::ScalarField as Halo2Field;
+use halo2curves::{bn256::G1 as Bn256, group::ff::Field, CurveExt};
+use rand_core::RngCore;
+use serde::{Deserialize, Serialize};
 /// Traits and implementations for elliptic curves of prime order.
 ///
 /// Justification for creating own elliptic curve trait:
@@ -35,6 +33,8 @@ pub trait PrimeOrderCurve:
     + AddAssign<Self>
     + SubAssign<Self>
     + MulAssign<Self::Scalar>
+    + Serialize
+    + for<'de> Deserialize<'de>
 {
     /// The scalar field of the curve.
     type Scalar: Halo2Field;
@@ -80,16 +80,26 @@ impl PrimeOrderCurve for Bn256 {
     }
 
     fn from_random_bytes(bytes: &[u8]) -> Option<Self> {
+        dbg!(bytes.len());
         if bytes.len() != 68 {
             return None;
         }
         let x_bytes = &bytes[..64];
-        let x = Self::Base::from_bytes_le(x_bytes);
+        dbg!(x_bytes.len());
+        let mut thingy = [0_u8; 32];
+        // thingy.copy_from_slice(&x_bytes[..31]);
+        dbg!(&thingy);
+        let x = Self::Base::from_bytes(&thingy).unwrap();
+        dbg!("hi");
 
         let sliced_sign_bytes = &bytes[64..68];
+        dbg!("hi1");
+
         let mut sign_bytes = [0_u8; 4];
         sign_bytes.copy_from_slice(sliced_sign_bytes);
         let lastu32 = u32::from_le_bytes(sign_bytes);
+        dbg!("hi2");
+
         let y_sign = (lastu32 % 2) as u8;
         let y2 = x.square() * x + Self::Base::from(3);
 

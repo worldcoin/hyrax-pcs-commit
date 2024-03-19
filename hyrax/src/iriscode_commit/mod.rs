@@ -1,9 +1,10 @@
 use super::curves::PrimeOrderCurve;
 use crate::pedersen::PedersenCommitter;
+use halo2_base::halo2_proofs::arithmetic::Field;
 use itertools::Itertools;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
-use remainder_shared_types::halo2curves::group::ff::Field;
+use std::f64;
 
 /// this function computes the commitments to the rows of the matrix. essentially, this is the vector of
 /// commitments that the prover should be sending over to the verifier.
@@ -17,12 +18,11 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
     // blinding_factors: &Vec<C::Scalar>,
 ) -> Vec<C> {
     // the number of blidning factors needed, which is exactly the number of rows in the matrix
-    let num_blinding_factors_needed = log2(input_layer_mle.len() / (1 << log_split_point));
+    let num_blinding_factors_needed =
+        f64::log2((input_layer_mle.len() / (1 << log_split_point)) as f64).ceil() as u32;
     // checking that the matrix row size and the matrix column size are both powers of two! otherwise hyrax does not work
     assert!(input_layer_mle.len().is_power_of_two());
 
-    // let mut seed = [0u8; 32];
-    // OsRng.fill_bytes(&mut seed);
     let mut prng = ChaCha20Rng::from_seed(blinding_factor_seed);
 
     let blinding_factors = (0..num_blinding_factors_needed)
