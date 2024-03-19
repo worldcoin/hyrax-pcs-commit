@@ -30,14 +30,9 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
 
     // we are using the u8_vector_commit to commit to each of the rows of the matrix, which are determined by
     // the log_split_point!
-    let hi = input_layer_mle
+    input_layer_mle
         .chunks(1 << log_split_point)
         .zip(blinding_factors.iter())
         .map(|(chunk, blind)| vector_committer.u8_vector_commit(&chunk.to_vec(), blind))
-        .collect_vec();
-
-    dbg!(input_layer_mle.len() / (1 << log_split_point));
-    dbg!(&hi.len());
-
-    hi
+        .collect_vec()
 }
