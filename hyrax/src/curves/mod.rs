@@ -1,8 +1,6 @@
 use rand_core::RngCore;
-use remainder_shared_types::{
-    halo2curves::{bn256::G1 as Bn256, group::ff::Field, CurveExt},
-    FieldExt,
-};
+use halo2curves::{bn256::G1 as Bn256, group::ff::Field, CurveExt};
+use halo2_base::utils::ScalarField as Halo2Field;
 /// Traits and implementations for elliptic curves of prime order.
 ///
 /// Justification for creating own elliptic curve trait:
@@ -13,7 +11,7 @@ use std::{
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 // Implementation note: do not confuse the following with the very similarly named remainder_shared_types::halo2curves::Group
-use remainder_shared_types::halo2curves::group::Group;
+use halo2curves::group::Group;
 
 pub mod tests;
 
@@ -36,10 +34,10 @@ pub trait PrimeOrderCurve:
     + MulAssign<Self::Scalar>
 {
     /// The scalar field of the curve.
-    type Scalar: FieldExt;
+    type Scalar: Halo2Field;
 
     /// The base field of the curve.
-    type Base: FieldExt;
+    type Base: Halo2Field;
 
     /// Return the additive identity of the curve.
     fn zero() -> Self;

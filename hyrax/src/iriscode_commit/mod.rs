@@ -1,6 +1,5 @@
 use super::curves::PrimeOrderCurve;
 use crate::pedersen::PedersenCommitter;
-use ark_std::log2;
 use itertools::Itertools;
 
 /// an enum representing how the user can specify their MLE coefficients. at least for our pedersen
@@ -33,10 +32,7 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
     blinding_factors: &Vec<C::Scalar>,
 ) -> Vec<C> {
     // checking that the matrix row size and the matrix column size are both powers of two! otherwise hyrax does not work
-    assert_eq!(
-        (1 << log2(input_layer_mle.len() / (1 << log_split_point))) * (1 << log_split_point),
-        input_layer_mle.len() as u32
-    );
+    assert!(input_layer_mle.len().is_power_of_two());
 
     // this appropriately computes the commitments to the coefficients matrix based on its internal type. if it is a u8
     // or an i8, we can use precomputed bit decompositions in order to speed up the pedersen commitments!!

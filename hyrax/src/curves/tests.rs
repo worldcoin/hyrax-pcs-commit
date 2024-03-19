@@ -1,5 +1,5 @@
 use super::*;
-use remainder_shared_types::halo2curves::bn256::G1 as Bn256;
+use halo2curves::bn256::G1 as Bn256;
 
 fn test_curve_ops<C: PrimeOrderCurve>() {
     let zero = C::zero();

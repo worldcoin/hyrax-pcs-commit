@@ -1,8 +1,8 @@
 use super::super::curves::PrimeOrderCurve;
 use super::*;
-use remainder_shared_types::halo2curves::bn256::Fr;
+use halo2curves::bn256::Fr;
 /// Tests for the Pedersen commitment scheme using the BN254 (aka BN256) curve and its scalar field (Fr).
-use remainder_shared_types::halo2curves::bn256::G1 as Bn256;
+use halo2curves::bn256::G1 as Bn256;
 
 type Scalar = <Bn256 as PrimeOrderCurve>::Scalar;
 
