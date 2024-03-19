@@ -22,6 +22,8 @@ fn compute_commitment(
     n_cols: usize,
     log_split_point: usize,
 ) -> Vec<Bn256> {
+
+    // --- Generating random matrix to be committed to; same size as iris image ---
     let u8_matrix = (0..n_rows * n_cols)
         .map(|_| rand::random::<u8>())
         .collect_vec();
@@ -30,16 +32,25 @@ fn compute_commitment(
         "accountable magic abcdefghijklmnopqrstuvwxyz",
         Some(8),
     );
+
+    // --- Randomness for blinding factors (note that `OsRng` calls `/dev/urandom` under the hood!) ---
     let mut seed = [0u8; 32];
     OsRng.fill_bytes(&mut seed);
+
+    // --- The actual commitment function which you will call ---
     let commitment =
         compute_matrix_commitments(log_split_point, &u8_matrix, &vector_committer, seed);
+    
+    // --- Serialization ---
     let file = fs::File::create(filepath).unwrap();
     let bw = BufWriter::new(file);
     serde_json::to_writer(bw, &commitment).unwrap();
+
+    // --- Return commitment ---
     commitment
 }
 
+/// Usage: `cargo run --release` from this directory (remainder-hyrax-tfh/hyrax/src/bin)
 fn main() {
     let start_time = Instant::now();
     let log_split_point = 9;
