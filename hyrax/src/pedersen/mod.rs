@@ -2,6 +2,10 @@ use super::curves::PrimeOrderCurve;
 use num_traits::PrimInt;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
+use sha3::digest::ExtendableOutput;
+use sha3::digest::Input;
+use sha3::digest::XofReader;
+use sha3::Shake256;
 
 /// For committing to vectors of integers and scalars using the Pedersen commitment scheme.
 pub struct PedersenCommitter<C: PrimeOrderCurve> {
@@ -53,9 +57,17 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
         assert!(public_string.len() >= 32);
         let mut public_string_array: [u8; 32] = [0; 32];
         public_string_array.copy_from_slice(&public_string.as_bytes()[..32]);
-        let mut prng = ChaCha20Rng::from_seed(public_string_array);
-        let generators: Vec<_> = (0..num_generators).map(|_| C::random(&mut prng)).collect();
+        let mut shake = Shake256::default();
+        shake.input(public_string_array);
 
+        let mut reader = shake.xof_result();
+        let mut uniform_bytes = [0u8; 64];
+        let generators: Vec<_> = (0..num_generators)
+            .map(|_| {
+                reader.read(&mut uniform_bytes);
+                C::from_random_bytes(&uniform_bytes)
+            })
+            .collect();
         generators
     }
 

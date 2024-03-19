@@ -8,16 +8,27 @@ itertools = "0.11.0"
 rand = "0.8"
 num-traits = "0.2.17"
 rand_core = { version = "0.6", default-features = false }
-halo2-base = { git = "https://github.com/axiom-crypto/halo2-lib", tag = "v0.3.0-ce", features = [
+halo2-base = { git = "https://github.com/axiom-crypto/halo2-lib", tag = "v0.4.1", features = [
   "halo2-axiom",
 ] }
-halo2curves = { git = "https://github.com/axiom-crypto/halo2.git", tag = "v2023_04_06" }
+
+# halo2curves = { git = "https://github.com/axiom-crypto/halo2.git", tag = "v2023_04_06" }
+# halo2curves = { git = "https://github.com/axiom-crypto/halo2.git" }
+# halo2curves = { git = "https://github.com/axiom-crypto/halo2curves.git" }
+# halo2curves = { package = "halo2curves-axiom", version = "0.5.0", default-features = false, features = [
+#   "bits",
+#   "bn256-table",
+#   "derive_serde",
+# ] }
+
+
 getrandom = "0.2"
 rand_chacha = "0.3.1"
 blake2 = "0.10.6"
-rayon = "1.7"
+rayon = "^1.8"
 serde = { version = "1.0.183", features = ["derive"] }
 serde_json = "1.0"
+sha3 = { version = "0.8.2", default-features = false }
 
 
 [features]

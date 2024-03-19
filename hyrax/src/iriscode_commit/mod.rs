@@ -18,8 +18,7 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
     // blinding_factors: &Vec<C::Scalar>,
 ) -> Vec<C> {
     // the number of blidning factors needed, which is exactly the number of rows in the matrix
-    let num_blinding_factors_needed =
-        f64::log2((input_layer_mle.len() / (1 << log_split_point)) as f64).ceil() as u32;
+    let num_blinding_factors_needed = input_layer_mle.len() / (1 << log_split_point);
     // checking that the matrix row size and the matrix column size are both powers of two! otherwise hyrax does not work
     assert!(input_layer_mle.len().is_power_of_two());
 
@@ -31,9 +30,14 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
 
     // we are using the u8_vector_commit to commit to each of the rows of the matrix, which are determined by
     // the log_split_point!
-    input_layer_mle
+    let hi = input_layer_mle
         .chunks(1 << log_split_point)
         .zip(blinding_factors.iter())
         .map(|(chunk, blind)| vector_committer.u8_vector_commit(&chunk.to_vec(), blind))
-        .collect_vec()
+        .collect_vec();
+
+    dbg!(input_layer_mle.len() / (1 << log_split_point));
+    dbg!(&hi.len());
+
+    hi
 }
