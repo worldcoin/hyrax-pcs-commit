@@ -21,7 +21,6 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
     let num_blinding_factors_needed = input_layer_mle.len() / (1 << log_split_point);
     // checking that the matrix row size and the matrix column size are both powers of two! otherwise hyrax does not work
     assert!(input_layer_mle.len().is_power_of_two());
-
     let mut prng = ChaCha20Rng::from_seed(blinding_factor_seed);
 
     let blinding_factors = (0..num_blinding_factors_needed)
@@ -30,8 +29,10 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
 
     // we are using the u8_vector_commit to commit to each of the rows of the matrix, which are determined by
     // the log_split_point!
-    input_layer_mle
-        .chunks(1 << log_split_point)
+    let row_chunks = input_layer_mle.chunks(1 << log_split_point);
+    // we need to make sure that the number of blinding factors we have computed is equal to the number of rows
+    assert_eq!(row_chunks.len(), num_blinding_factors_needed);
+    row_chunks
         .zip(blinding_factors.iter())
         .map(|(chunk, blind)| vector_committer.u8_vector_commit(&chunk.to_vec(), blind))
         .collect_vec()
