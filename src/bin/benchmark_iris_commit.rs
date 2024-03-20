@@ -1,6 +1,6 @@
 /// Measure how long it takes to commit to the Worldcoin iris image, arranged as a square matrix.
 /// Random u8 values are used.
-use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256;
+use halo2curves::bn256::G1 as Bn256;
 use hyrax::curves::PrimeOrderCurve;
 use hyrax::iriscode_commit::compute_matrix_commitments;
 use hyrax::pedersen::PedersenCommitter;
@@ -53,7 +53,7 @@ fn compute_commitment(
 fn main() {
     let start_time = Instant::now();
     let log_split_point = 9;
-    let commit = compute_commitment("test2.json", N_ROWS, N_COLS, log_split_point);
+    let commit = compute_commitment("test4.json", N_ROWS, N_COLS, log_split_point);
     println!(
         "Computing {} vector commitments, each of length {}, took: {:?}",
         N_ROWS,
@@ -62,7 +62,7 @@ fn main() {
     );
 
     // testing deserialization
-    let mut file = std::fs::File::open("test2.json").unwrap();
+    let mut file = std::fs::File::open("test4.json").unwrap();
     let initial_buffer_size = file.metadata().map(|m| m.len() as usize + 1).unwrap_or(0);
     let mut bufreader = Vec::with_capacity(initial_buffer_size);
     file.read_to_end(&mut bufreader).unwrap();

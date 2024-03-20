@@ -1,7 +1,10 @@
-use halo2_base::halo2_proofs::halo2curves::{bn256::G1 as Bn256, CurveExt};
+use halo2_base::halo2_proofs::arithmetic::Field;
 use halo2_base::utils::ScalarField as Halo2Field;
+use halo2curves::{bn256::G1 as Bn256, CurveExt};
 use rand_core::RngCore;
 use serde::{Deserialize, Serialize};
+use sha3::digest::XofReader;
+use sha3::Sha3XofReader;
 /// Traits and implementations for elliptic curves of prime order.
 ///
 /// Justification for creating own elliptic curve trait:
@@ -106,7 +109,40 @@ impl PrimeOrderCurve for Bn256 {
             None
         } else {
             let z_inv = self.z.invert().unwrap();
-            Some((self.x * z_inv, self.y * z_inv))
+            Some((self.x * z_inv.square(), self.y * z_inv.cube()))
         }
+    }
+}
+
+pub struct Sha3XofReaderWrapper {
+    item: Sha3XofReader,
+}
+
+impl Sha3XofReaderWrapper {
+    pub fn new(item: Sha3XofReader) -> Self {
+        Self { item }
+    }
+}
+
+impl RngCore for Sha3XofReaderWrapper {
+    fn next_u32(&mut self) -> u32 {
+        let mut buffer: [u8; 4] = [0; 4];
+        self.item.read(&mut buffer);
+        u32::from_le_bytes(buffer)
+    }
+
+    fn next_u64(&mut self) -> u64 {
+        let mut buffer: [u8; 8] = [0; 8];
+        self.item.read(&mut buffer);
+        u64::from_le_bytes(buffer)
+    }
+
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        self.item.read(dest);
+    }
+
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        self.item.read(dest);
+        Ok(())
     }
 }

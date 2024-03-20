@@ -1,3 +1,5 @@
+use crate::curves::Sha3XofReaderWrapper;
+
 use super::curves::PrimeOrderCurve;
 use num_traits::PrimInt;
 use rand::SeedableRng;
@@ -60,13 +62,10 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
         let mut shake = Shake256::default();
         shake.input(public_string_array);
 
-        let mut reader = shake.xof_result();
-        let mut uniform_bytes = [0u8; 64];
+        let reader = shake.xof_result();
+        let mut reader_wrapper = Sha3XofReaderWrapper::new(reader);
         let generators: Vec<_> = (0..num_generators)
-            .map(|_| {
-                reader.read(&mut uniform_bytes);
-                C::from_random_bytes(&uniform_bytes)
-            })
+            .map(|_| C::random(&mut reader_wrapper))
             .collect();
         generators
     }
