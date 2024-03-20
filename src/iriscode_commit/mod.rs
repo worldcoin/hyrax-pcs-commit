@@ -4,7 +4,6 @@ use halo2_base::halo2_proofs::arithmetic::Field;
 use itertools::Itertools;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
-use std::f64;
 
 /// this function computes the commitments to the rows of the matrix. essentially, this is the vector of
 /// commitments that the prover should be sending over to the verifier.

@@ -2,11 +2,8 @@ use crate::curves::Sha3XofReaderWrapper;
 
 use super::curves::PrimeOrderCurve;
 use num_traits::PrimInt;
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
 use sha3::digest::ExtendableOutput;
 use sha3::digest::Input;
-use sha3::digest::XofReader;
 use sha3::Shake256;
 
 /// For committing to vectors of integers and scalars using the Pedersen commitment scheme.
