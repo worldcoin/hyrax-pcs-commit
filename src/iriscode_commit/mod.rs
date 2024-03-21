@@ -1,7 +1,7 @@
 use super::curves::PrimeOrderCurve;
 use crate::pedersen::PedersenCommitter;
 use halo2_base::halo2_proofs::arithmetic::Field;
-use halo2_base::halo2_proofs::halo2curves::{bn256::G1 as Bn256Point, CurveExt};
+use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256Point;
 use itertools::Itertools;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
