@@ -26,6 +26,6 @@ pub fn compute_matrix_commitments<C: PrimeOrderCurve>(
     let row_chunks = input_layer_mle.chunks(n_cols);
     row_chunks
         .zip(blinding_factors.iter())
-        .map(|(chunk, blind)| vector_committer.vector_commit(&chunk.to_vec(), blind))
+        .map(|(chunk, blind)| vector_committer.vector_commit(&chunk, blind))
         .collect_vec()
 }

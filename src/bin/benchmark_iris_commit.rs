@@ -12,7 +12,7 @@ use std::time::Instant;
 
 const LOG_IMAGE_SIZE: usize = 17;
 const LOG_SPLIT_POINT: usize = 9;
-const FILENAME: &str = "test.json";
+const FILENAME: &str = "commitment-iris-image.json";
 
 // --- Public string used to derive the generators (arbitrary, but must not change) ---
 const PUBLIC_STRING: &str = "accountable magic abcdefghijklmnopqrstuvwxyz";
