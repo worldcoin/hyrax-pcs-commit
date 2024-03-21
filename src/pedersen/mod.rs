@@ -1,10 +1,12 @@
 use crate::curves::Sha3XofReaderWrapper;
-
 use super::curves::PrimeOrderCurve;
 use num_traits::PrimInt;
 use sha3::digest::ExtendableOutput;
 use sha3::digest::Input;
 use sha3::Shake256;
+
+#[cfg(test)]
+pub mod tests;
 
 /// For committing to vectors of bytes (u8s) using the Pedersen commitment scheme.
 pub struct PedersenCommitter<C: PrimeOrderCurve> {

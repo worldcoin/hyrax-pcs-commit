@@ -5,6 +5,10 @@ use rand_core::RngCore;
 use serde::{Deserialize, Serialize};
 use sha3::digest::XofReader;
 use sha3::Sha3XofReader;
+
+#[cfg(test)]
+pub mod tests;
+
 /// Traits and implementations for elliptic curves of prime order.
 ///
 /// Justification for creating own elliptic curve trait:
