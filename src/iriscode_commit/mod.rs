@@ -1,6 +1,7 @@
 use super::curves::PrimeOrderCurve;
 use crate::pedersen::PedersenCommitter;
 use halo2_base::halo2_proofs::arithmetic::Field;
+use halo2_base::halo2_proofs::halo2curves::{bn256::G1 as Bn256Point, CurveExt};
 use itertools::Itertools;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
@@ -35,4 +36,17 @@ pub fn compute_commitments<C: PrimeOrderCurve>(
         .zip(blinding_factors.iter())
         .map(|(chunk, blind)| vector_committer.vector_commit(&chunk, blind))
         .collect_vec()
+}
+
+/// Wrapper function around `compute_commitments` instantiated with the
+/// appropriate implementation of the BN254 curve.
+///
+/// TODO!(benwilson): Update the function signature here to reflect the
+/// new return type
+pub fn compute_commitments_concrete(
+    data: &[u8],
+    vector_committer: &PedersenCommitter<Bn256Point>,
+    blinding_factor_seed: [u8; 32],
+) -> Vec<Bn256Point> {
+    compute_commitments(data, vector_committer, blinding_factor_seed)
 }
