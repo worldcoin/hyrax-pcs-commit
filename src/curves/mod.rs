@@ -1,6 +1,6 @@
 use halo2_base::halo2_proofs::arithmetic::Field;
 use halo2_base::utils::ScalarField as Halo2Field;
-use halo2curves::{bn256::G1 as Bn256, CurveExt};
+use halo2_base::halo2_proofs::halo2curves::{bn256::G1 as Bn256, CurveExt};
 use rand_core::RngCore;
 use serde::{Deserialize, Serialize};
 use sha3::digest::XofReader;

@@ -1,6 +1,6 @@
 /// Measure how long it takes to commit to the Worldcoin iris image, arranged as a square matrix.
 /// Random u8 values are used as a stand in for the normalized iris image.
-use halo2curves::bn256::G1 as Bn256;
+use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256;
 use hyrax::iriscode_commit::compute_matrix_commitments;
 use hyrax::pedersen::PedersenCommitter;
 use itertools::Itertools;

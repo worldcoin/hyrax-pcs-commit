@@ -11,7 +11,6 @@ rand_core = { version = "0.6", default-features = false }
 halo2-base = { git = "https://github.com/axiom-crypto/halo2-lib", tag = "v0.3.0-ce", features = [
   "halo2-axiom",
 ] }
-halo2curves = { git = "https://github.com/axiom-crypto/halo2.git", tag = "v2023_04_06" }
 getrandom = "0.2"
 rand_chacha = "0.3.1"
 blake2 = "0.10.6"
