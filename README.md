@@ -1,10 +1,9 @@
 # Hyrax Commitment Implementation 
 ## Usage 
-In order to run a test/example, run `cargo run --release --bin benchmark_iriscode_commit`. The function models what an iris image commit would look like (assuming we have an image of size 2^17). Check the `compute_commitment` function for an example usage. This additionally serializes the commitment and saves it to a file specified by the constant `FILENAME` in the binary. Then, it
-deserializes the commitment and asserts that the original commitment is equal to the deserialized version.
+In order to run a test/example, run `cargo run --release --bin benchmark_iriscode_commit`. The `main` function computes the commitment to a mock iris image of size 2^17 (=128 x 1024). It also demonstrates serialization and deserialization of the commitment.
 
 ## Commitment function
-Can be found under the `./src/iriscode_commit/mod.rs` as the `compute_matrix_commitments` function.
+Can be found under the `./src/iriscode_commit/mod.rs` as the `compute_commitments` function.
 
 ## Public Generator Setup
 We sample the generators for the Pedersen commitment deterministically using the Shake256 hash function which uses a public string as an initializer. This can be found under the `sample_generators` function in `./src/pedersen/mod.rs`. 
