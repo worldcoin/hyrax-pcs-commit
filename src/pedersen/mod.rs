@@ -13,45 +13,38 @@ pub struct PedersenCommitter<C: PrimeOrderCurve> {
     pub message_generators: Vec<C>,
     /// the "h" generator which is exponentiated by the blinding factor
     pub blinding_generator: C,
-    /// The bitwidth of the absolute values of the integers that can be committed to using integral vector commit methods (has no bearing on scalar_commit and vector_commit).
-    pub int_abs_val_bitwidth: usize,
     // TODO(vishady): "generators" rather than message_generators
     message_generator_doublings: Vec<Vec<C>>,
 }
 
+const U8_BITWIDTH: usize = 8;
 impl<C: PrimeOrderCurve> PedersenCommitter<C> {
-    const DEFAULT_INT_ABS_VAL_BITWIDTH: usize = 8;
-
     /// Creates a new PedersenCommitter with random generators.  See also [PedersenCommitter].
-    /// DEFAULT_INT_ABS_VAL_BITWIDTH is used for `int_abs_val_bitwidth` if None is provided.
     /// Post: self.message_generators.len() == max_message_length
     /// TODO(vishady): look at the halo2curves C::random
     /// TODO(vishady): benchmarks on the hash function for rng
     pub fn new(
         num_generators: usize,
         public_string: &str,
-        int_abs_val_bitwidth: Option<usize>,
     ) -> Self {
         let all_generators = Self::sample_generators(num_generators + 1, public_string);
         let blinding_generator_h = all_generators[0];
         let message_generators_g_i = all_generators[1..].to_vec();
 
-        let int_abs_val_bitwidth =
-            int_abs_val_bitwidth.unwrap_or(Self::DEFAULT_INT_ABS_VAL_BITWIDTH);
         let message_generator_doublings: Vec<Vec<C>> = message_generators_g_i
             .clone()
             .into_iter()
-            .map(|gen| precompute_doublings(gen, int_abs_val_bitwidth))
+            .map(|gen| precompute_doublings(gen, U8_BITWIDTH))
             .collect();
 
         Self {
             message_generators: message_generators_g_i,
             blinding_generator: blinding_generator_h,
-            int_abs_val_bitwidth,
             message_generator_doublings,
         }
     }
 
+    // FIXME docstring
     fn sample_generators(num_generators: usize, public_string: &str) -> Vec<C> {
         assert!(public_string.len() >= 32);
         let mut public_string_array: [u8; 32] = [0; 32];
@@ -69,52 +62,23 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
 
     /// Commits to the vector of u8s using the specified blinding factor.
     /// Uses the precomputed generator powers and the binary decomposition.
-    /// Convient wrapper of integer_vector_commit.
-    /// Pre: self.int_abs_val_bitwidth >= 8.
-    /// Post: same result as vector_commit, assuming uints are smaller than scalar field order.
-    pub fn u8_vector_commit(&self, message: &[u8], blinding: &C::Scalar) -> C {
-        debug_assert!(self.int_abs_val_bitwidth >= 8);
-        let message_is_negative_bits = vec![false; message.len()];
-        self.integer_vector_commit(&message, &message_is_negative_bits, blinding)
-    }
-
-    /// Commits to the vector of integers using the specified blinding factor.
-    /// Integers are provided as a vector of UNSIGNED ints and a vector of bits indicating whether the integer is negative.
-    /// Pre: values in message are non-negative.
-    /// Pre: values have unsigned binary expressions using at most (self.highest_generator_power + 1) bits.
     /// Pre: message.len() <= self.message_generators.len()
-    pub fn integer_vector_commit<T: PrimInt>(
-        &self,
-        message: &[T],
-        message_is_negative_bits: &Vec<bool>,
-        blinding: &C::Scalar,
-    ) -> C {
+    /// Post: same result as vector_commit, assuming uints are smaller than scalar field order.
+    pub fn vector_commit(&self, message: &[u8], blinding: &C::Scalar) -> C {
         assert!(message.len() <= self.message_generators.len());
         let unblinded_commit = message
             .iter()
             .zip(self.message_generator_doublings.iter())
             .map(|(input, generator_doublings)| {
-                debug_assert!(*input >= T::zero());
                 let bits = binary_decomposition_le(*input);
                 let mut acc = C::zero();
                 bits.into_iter().enumerate().for_each(|(i, bit)| {
                     if bit {
-                        debug_assert!(i < self.int_abs_val_bitwidth); // ensure bit decomp is not longer than our precomputed generator powers
                         acc += generator_doublings[i];
                     }
                 });
                 acc
             })
-            .zip(message_is_negative_bits.iter())
-            .map(
-                |(gen_power, is_negative)| {
-                    if *is_negative {
-                        -gen_power
-                    } else {
-                        gen_power
-                    }
-                },
-            )
             .fold(C::zero(), |acc, value| acc + value);
 
         unblinded_commit + self.blinding_generator * *blinding
