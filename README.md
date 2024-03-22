@@ -19,7 +19,7 @@ The binary is found in `./src/bin/hyrax_commit.rs`.
 
 ### Building using our library
 This implementation of the Hyrax polynomial commitment requires Rust nightly (version found in `rust-toolchain` file). To compile using our library, run
-`cargo build --release`
+`cargo build --release`.
 
 ## Example Usage
 ### Example binary usage 
@@ -44,7 +44,7 @@ pub struct HyraxCommitmentOutputSerialized {
 ```
 where
 * `commitment_serialized` is a bytestring representation of the polynomial commitment, *to be signed by the Orb and included as part of the payload to the backend servers/verifier*, and
-* `blinding_factors_serialized` is a bytestring representation of the blinding factors generated during the commitment process, *to be sent from the Orb to the user's self-custody device (as part of the self-custody payload) through a secure channel and deleted immediately afterward*
+* `blinding_factors_serialized` is a bytestring representation of the blinding factors generated during the commitment process, *to be sent from the Orb to the user's self-custody device (as part of the self-custody payload) through a secure channel and deleted immediately afterward*.
 
 ---
 
