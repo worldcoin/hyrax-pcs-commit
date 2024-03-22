@@ -23,9 +23,9 @@ This implementation of the Hyrax polynomial commitment requires Rust nightly (ve
 
 ## Example Usage
 ### Example binary usage 
-In `./scripts`, we've included a shell script `run_hyrax_commit` which will execute our binary using a random iris image found in `./scripts/e2etesting/normalized-iris-image.json`. You can generate the commitment
+In `./examples`, we've included a shell script `run_hyrax_commit` which will execute our binary using a random iris image found in `./examples/e2etesting/normalized-iris-image.json`. You can generate the commitment
 and blinding factors for this commitment and write them to file by running `./run_hyrax_commit` within the
-`./scripts` directory. The commitment will get written to `./scripts/e2etesting/commitment-iris-image-example.json` and the blinding factors will get written to `e2etesting/blinding-factors-iris-image-example.json`.
+`./examples` directory. The commitment will get written to `./examples/e2etesting/commitment-iris-image-example.json` and the blinding factors will get written to `e2etesting/blinding-factors-iris-image-example.json`.
 
 ### Example library usage
 To run the built-in example through our library, run `cargo run --release --bin example_hyrax_commit`. The `main` function computes the commitment to a mock iris image of size 2^17 (=128 x 1024). It also demonstrates binary serialization/deserialization, and writes/reads the byte stream to/from file.
