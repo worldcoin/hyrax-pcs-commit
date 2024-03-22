@@ -6,11 +6,29 @@ This repository contains an implementation of the [Hyrax](https://eprint.iacr.or
 Note that this repository contains _only_ the code needed to generate a commitment, and does not provide the implementation necessary to generate a proof-of-evaluation against any such committed polynomial, nor the verification of such an evaluation proof.
 
 ## Building
-This implementation of the Hyrax polynomial commitment requires Rust nightly (version found in `rust-toolchain` file). To compile, run
+### Building using our binary
+To execute our binary, you can run the following command:
+```
+cargo build --release
+cargo run --release --bin hyrax_commit -- \
+    --input-normalized-iris-image-filepath {filepath to iris image} \
+    --output-commitment-filepath {filepath to write the commitment to} \
+    --output-blinding-factors-filepath {filepath to write blinding factors to} \
+```
+The binary is found in `./src/bin/hyrax_commit.rs`. 
+
+### Building using our library
+This implementation of the Hyrax polynomial commitment requires Rust nightly (version found in `rust-toolchain` file). To compile using our library, run
 `cargo build --release`
 
 ## Example Usage
-To run the built-in example, run `cargo run --release --bin benchmark_iriscode_commit`. The `main` function computes the commitment to a mock iris image of size 2^17 (=128 x 1024). It also demonstrates binary serialization/deserialization, and writes/reads the byte stream to/from file.
+### Example binary usage 
+In `./scripts`, we've included a shell script `run_hyrax_commit` which will execute our binary using a random iris image found in `./scripts/e2etesting/normalized-iris-image.json`. You can generate the commitment
+and blinding factors for this commitment and write them to file by running `./run_hyrax_commit` within the
+`./scripts` directory. The commitment will get written to `./scripts/e2etesting/commitment-iris-image-example.json` and the blinding factors will get written to `e2etesting/blinding-factors-iris-image-example.json`.
+
+### Example library usage
+To run the built-in example through our library, run `cargo run --release --bin example_hyrax_commit`. The `main` function computes the commitment to a mock iris image of size 2^17 (=128 x 1024). It also demonstrates binary serialization/deserialization, and writes/reads the byte stream to/from file.
 
 ## Production Usage
 The primary user-friendly function can be found in `./src/iriscode_commit/mod.rs` as the `compute_commitments_binary_outputs` function. The function takes in as input

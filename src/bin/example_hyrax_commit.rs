@@ -1,10 +1,6 @@
 /// Measure how long it takes to commit to the Worldcoin iris image.
 /// Random u8 values are used as a stand in for the normalized iris image.
-use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256;
-use hyrax::iriscode_commit::{
-    compute_commitments, compute_commitments_binary_outputs, HyraxCommitmentOutputSerialized,
-};
-use hyrax::pedersen::PedersenCommitter;
+use hyrax::iriscode_commit::{compute_commitments_binary_outputs, HyraxCommitmentOutputSerialized};
 use itertools::Itertools;
 use rand::RngCore;
 use rand_core::OsRng;
@@ -14,8 +10,13 @@ use std::time::Instant;
 
 // image is 128 x 1024 = 2^17 in size
 const LOG_IMAGE_SIZE: usize = 17;
-const COMMITMENT_FILENAME: &str = "commitment-iris-image.json";
-const BLINDING_FACTORS_FILENAME: &str = "blinding-factors-iris-image.json";
+// this is the file that the image is stored in as an array of bytes. in the example
+// function, we create a random "image" and just save this to file.
+const INPUT_NORMALIZED_IMAGE_FILENAME: &str = "e2etesting/normalized-iris-image.json";
+// this is the file that the serialized commitment to the iris image is stored in.
+const COMMITMENT_FILENAME: &str = "e2etesting/commitment-iris-image.json";
+// this is the file that the serialized blinding factors are stored in.
+const BLINDING_FACTORS_FILENAME: &str = "e2etesting/blinding-factors-iris-image.json";
 
 /// Helper function for buffered writing to file.
 fn write_bytes_to_file(filename: &str, bytes: &[u8]) {
@@ -39,6 +40,8 @@ fn main() {
     let iris_image = (0..1 << LOG_IMAGE_SIZE)
         .map(|_| rand::random::<u8>())
         .collect_vec();
+
+    write_bytes_to_file(INPUT_NORMALIZED_IMAGE_FILENAME, &iris_image);
 
     let start_time = Instant::now();
 
