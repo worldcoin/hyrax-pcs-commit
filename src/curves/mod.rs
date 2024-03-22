@@ -1,6 +1,6 @@
 use halo2_base::halo2_proofs::arithmetic::Field;
-use halo2_base::utils::ScalarField as Halo2Field;
 use halo2_base::halo2_proofs::halo2curves::{bn256::G1 as Bn256, CurveExt};
+use halo2_base::utils::ScalarField as Halo2Field;
 use rand_core::RngCore;
 use serde::{Deserialize, Serialize};
 use sha3::digest::XofReader;
@@ -41,10 +41,10 @@ pub trait PrimeOrderCurve:
     + for<'de> Deserialize<'de>
 {
     /// The scalar field of the curve.
-    type Scalar: Halo2Field;
+    type Scalar: Halo2Field + Serialize + for<'de> Deserialize<'de>;
 
     /// The base field of the curve.
-    type Base: Halo2Field;
+    type Base: Halo2Field + Serialize + for<'de> Deserialize<'de>;
 
     /// Return the additive identity of the curve.
     fn zero() -> Self;
