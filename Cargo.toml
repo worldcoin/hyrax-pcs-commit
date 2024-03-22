@@ -23,5 +23,9 @@ bincode = "1.3.3"
 [features]
 
 [[bin]]
-name = "benchmark_iris_commit"
-path = "src/bin/benchmark_iris_commit.rs"
+name = "hyrax_commit"
+path = "src/bin/hyrax_commit.rs"
+
+[[bin]]
+name = "example_hyrax_commit"
+path = "src/bin/example_hyrax_commit.rs"
