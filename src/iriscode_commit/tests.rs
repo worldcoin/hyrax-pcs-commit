@@ -1,8 +1,12 @@
 use std::fs;
 use std::io::{BufWriter, Read};
 
+use halo2_base::utils::ScalarField;
+
+use crate::curves::PrimeOrderCurve;
 use crate::iriscode_commit::{
-    deserialize_blinding_factors_from_bytes_concrete, deserialize_commitment_from_bytes_concrete,
+    deserialize_blinding_factors_from_bytes_compressed_concrete,
+    deserialize_commitment_from_bytes_compressed_concrete,
 };
 
 /// Helper function for buffered writing to file.
@@ -63,8 +67,14 @@ fn test_serialize_end_to_end() {
     println!("Computing commitment took: {:?}", start_time.elapsed());
 
     // --- Serialize into binary ---
-    let commitment_serialized: Vec<u8> = bincode::serialize(&commitment).unwrap();
-    let blinding_factors_serialized: Vec<u8> = bincode::serialize(&blinding_factors).unwrap();
+    let commitment_serialized: Vec<u8> = commitment
+        .iter()
+        .flat_map(|element| element.to_bytes_compressed())
+        .collect_vec();
+    let blinding_factors_serialized: Vec<u8> = blinding_factors
+        .iter()
+        .flat_map(|element| element.to_bytes_le())
+        .collect_vec();
 
     // --- Sample serialization to file (iris image, blinding factors) ---
     write_bytes_to_file(TEST_COMMITMENT_FILENAME, &commitment_serialized);
@@ -83,9 +93,10 @@ fn test_serialize_end_to_end() {
 
     // --- Deserialize from bytes ---
     let deserialized_commitment =
-        deserialize_commitment_from_bytes_concrete(&commitment_bytes_from_file);
-    let deserialized_blinding_factors =
-        deserialize_blinding_factors_from_bytes_concrete(&blinding_factors_bytes_from_file);
+        deserialize_commitment_from_bytes_compressed_concrete(&commitment_bytes_from_file);
+    let deserialized_blinding_factors = deserialize_blinding_factors_from_bytes_compressed_concrete(
+        &blinding_factors_bytes_from_file,
+    );
 
     // --- Sanitycheck vs. original commitment/blinding factors ---
     assert_eq!(deserialized_commitment, commitment);

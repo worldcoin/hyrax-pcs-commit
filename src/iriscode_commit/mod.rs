@@ -5,6 +5,7 @@ use crate::pedersen::PedersenCommitter;
 use halo2_base::halo2_proofs::arithmetic::Field;
 use halo2_base::halo2_proofs::halo2curves::bn256::Fr as Bn256Scalar;
 use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256Point;
+use halo2_base::utils::ScalarField;
 use itertools::Itertools;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
@@ -55,9 +56,15 @@ pub fn compute_commitments_binary_outputs(
         blinding_factors,
     } = compute_commitments(data, &vector_committer, blinding_factor_seed);
 
-    // --- Serialize into binary ---
-    let commitment_serialized: Vec<u8> = bincode::serialize(&commitment).unwrap();
-    let blinding_factors_serialized: Vec<u8> = bincode::serialize(&blinding_factors).unwrap();
+    // --- Serialize into bytes ---
+    let commitment_serialized: Vec<u8> = commitment
+        .iter()
+        .flat_map(|element| element.to_bytes_compressed())
+        .collect_vec();
+    let blinding_factors_serialized: Vec<u8> = blinding_factors
+        .iter()
+        .flat_map(|element| element.to_bytes_le())
+        .collect_vec();
 
     HyraxCommitmentOutputSerialized {
         commitment_serialized,
@@ -104,22 +111,30 @@ pub fn compute_commitments<C: PrimeOrderCurve>(
 }
 
 /// Helper functions for deserializing commitments/blinding factors from byte array
-pub fn deserialize_commitment_from_bytes<C: PrimeOrderCurve>(bytes: &[u8]) -> Vec<C> {
-    let commitment: Vec<C> = bincode::deserialize(bytes).unwrap();
+pub fn deserialize_commitment_from_bytes_compressed<C: PrimeOrderCurve>(bytes: &[u8]) -> Vec<C> {
+    let commitment = bytes
+        .chunks(C::COMPRESSED_CURVE_POINT_BYTEWIDTH)
+        .map(|byte_repr| C::from_bytes_compressed(byte_repr))
+        .collect_vec();
     commitment
 }
 
-pub fn deserialize_blinding_factors_from_bytes<C: PrimeOrderCurve>(bytes: &[u8]) -> Vec<C::Scalar> {
-    let blinding_factors: Vec<C::Scalar> = bincode::deserialize(bytes).unwrap();
+pub fn deserialize_blinding_factors_from_bytes_compressed<C: PrimeOrderCurve>(
+    bytes: &[u8],
+) -> Vec<C::Scalar> {
+    let blinding_factors: Vec<<C as PrimeOrderCurve>::Scalar> = bytes
+        .chunks(C::SCALAR_ELEM_BYTEWIDTH)
+        .map(|byte_repr| C::Scalar::from_bytes_le(byte_repr))
+        .collect_vec();
     blinding_factors
 }
 
-pub fn deserialize_commitment_from_bytes_concrete(bytes: &[u8]) -> Vec<Bn256Point> {
-    let commitment: Vec<Bn256Point> = bincode::deserialize(bytes).unwrap();
-    commitment
+pub fn deserialize_commitment_from_bytes_compressed_concrete(bytes: &[u8]) -> Vec<Bn256Point> {
+    deserialize_commitment_from_bytes_compressed(bytes)
 }
 
-pub fn deserialize_blinding_factors_from_bytes_concrete(bytes: &[u8]) -> Vec<Bn256Scalar> {
-    let blinding_factors: Vec<Bn256Scalar> = bincode::deserialize(bytes).unwrap();
-    blinding_factors
+pub fn deserialize_blinding_factors_from_bytes_compressed_concrete(
+    bytes: &[u8],
+) -> Vec<Bn256Scalar> {
+    deserialize_blinding_factors_from_bytes_compressed::<Bn256Point>(bytes)
 }

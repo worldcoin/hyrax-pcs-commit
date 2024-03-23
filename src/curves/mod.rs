@@ -1,6 +1,7 @@
 use halo2_base::halo2_proofs::arithmetic::Field;
 use halo2_base::halo2_proofs::halo2curves::{bn256::G1 as Bn256, CurveExt};
 use halo2_base::utils::ScalarField as Halo2Field;
+use itertools::Itertools;
 use rand_core::RngCore;
 use serde::{Deserialize, Serialize};
 use sha3::digest::XofReader;
@@ -46,6 +47,11 @@ pub trait PrimeOrderCurve:
     /// The base field of the curve.
     type Base: Halo2Field + Serialize + for<'de> Deserialize<'de>;
 
+    /// The byte sizes for the serialized representations.
+    const UNCOMPRESSED_CURVE_POINT_BYTEWIDTH: usize;
+    const COMPRESSED_CURVE_POINT_BYTEWIDTH: usize;
+    const SCALAR_ELEM_BYTEWIDTH: usize;
+
     /// Return the additive identity of the curve.
     fn zero() -> Self;
 
@@ -65,11 +71,27 @@ pub trait PrimeOrderCurve:
     fn affine_coordinates(&self) -> Option<(Self::Base, Self::Base)>;
 
     fn from_random_bytes(bytes: &[u8]) -> Self;
+
+    /// Returns an uncompressed byte representation of a curve element.
+    fn to_bytes_uncompressed(&self) -> Vec<u8>;
+
+    /// Returns a compressed byte representation of a curve element.
+    fn to_bytes_compressed(&self) -> Vec<u8>;
+
+    /// Returns the unique curve element represented by the uncompressed bytestring.
+    fn from_bytes_uncompressed(bytes: &[u8]) -> Self;
+
+    /// Returns the unique curve element represented by the compressed bytestring.
+    fn from_bytes_compressed(bytes: &[u8]) -> Self;
 }
 
 impl PrimeOrderCurve for Bn256 {
     type Scalar = <Bn256 as CurveExt>::ScalarExt;
     type Base = <Bn256 as CurveExt>::Base;
+
+    const UNCOMPRESSED_CURVE_POINT_BYTEWIDTH: usize = 65;
+    const COMPRESSED_CURVE_POINT_BYTEWIDTH: usize = 34;
+    const SCALAR_ELEM_BYTEWIDTH: usize = 32;
 
     fn zero() -> Self {
         Bn256::identity()
@@ -114,6 +136,137 @@ impl PrimeOrderCurve for Bn256 {
         } else {
             let z_inv = self.z.invert().unwrap();
             Some((self.x * z_inv.square(), self.y * z_inv.cube()))
+        }
+    }
+
+    /// The bytestring representation of the BN256 curve is a `[u8; 65]` with
+    /// the following semantic representation:
+    /// * The first `u8` byte represents whether the point is a point at
+    /// infinity (in affine coordinates). 1 if it is at infinity, 0 otherwise.
+    /// * The next 32 `u8` bytes represent the x-coordinate of the point in little endian.
+    /// * The next 32 `u8` bytes represent the y-coordinate of the point in little endian.
+    fn to_bytes_uncompressed(&self) -> Vec<u8> {
+        // --- First get the affine coordinates. If `None`, we have a point at infinity. ---
+        let affine_coords = self.affine_coordinates();
+
+        if let Some((x, y)) = affine_coords {
+            let x_bytes = x.to_bytes();
+            let y_bytes = y.to_bytes();
+            let all_bytes = std::iter::once(0_u8)
+                .chain(x_bytes.into_iter())
+                .chain(y_bytes.into_iter())
+                .collect_vec();
+            assert_eq!(all_bytes.len(), Self::UNCOMPRESSED_CURVE_POINT_BYTEWIDTH);
+            all_bytes
+        } else {
+            // --- Point at infinity ---
+            return [1_u8; 65].to_vec();
+        }
+    }
+
+    /// The bytestring representation of the BN256 curve is a `[u8; 34]` with
+    /// the following semantic representation:
+    /// * The first `u8` byte represents whether the point is a point at
+    /// infinity (in affine coordinates).
+    /// * The next 32 `u8` bytes represent the x-coordinate of the point in little endian.
+    /// * The final `u8` byte represents the sign of the y-coordinate of the
+    /// point.
+    fn to_bytes_compressed(&self) -> Vec<u8> {
+        // --- First get the affine coordinates. If `None`, we have a point at infinity. ---
+        let affine_coords = self.affine_coordinates();
+
+        if let Some((x, y)) = affine_coords {
+            let x_bytes = x.to_bytes();
+            // 0 when the square root is even, 1 when the square root is odd. we grab
+            // the parity from the most significant byte and taking the & with 1. the
+            // two square roots of y in the field always have opposite parity because
+            // the field modulus is odd.
+            let y_parity = y.to_bytes()[0] & 1;
+            let all_bytes = std::iter::once(0_u8)
+                .chain(x_bytes.into_iter())
+                .chain(std::iter::once(y_parity))
+                .collect_vec();
+            assert_eq!(all_bytes.len(), Self::COMPRESSED_CURVE_POINT_BYTEWIDTH);
+            all_bytes
+        } else {
+            // --- Point at infinity ---
+            return [1_u8; 34].to_vec();
+        }
+    }
+
+    /// will return the elliptic curve point corresponding to an array of bytes that represent an uncompressed point.
+    /// we represent it as a a normalized projective curve point (ie, the x and y coordinates are directly the affine coordinates)
+    /// so the z coordinate is always 1.
+    fn from_bytes_uncompressed(bytes: &[u8]) -> Self {
+        // assert that this is a 65 byte representation since it's uncompressed
+        assert_eq!(bytes.len(), Self::UNCOMPRESSED_CURVE_POINT_BYTEWIDTH);
+        // first check if it is a point at infinity
+        if bytes[0] == 1_u8 {
+            return Self {
+                x: Self::Base::zero(),
+                y: Self::Base::one(),
+                z: Self::Base::zero(),
+            };
+        } else {
+            let mut x_bytes_alloc = [0_u8; 32];
+            let x_bytes = &bytes[1..33];
+            x_bytes_alloc.copy_from_slice(x_bytes);
+
+            let mut y_bytes_alloc = [0_u8; 32];
+            let y_bytes = &bytes[33..];
+            y_bytes_alloc.copy_from_slice(y_bytes);
+
+            let x_coord = Self::Base::from_bytes(&x_bytes_alloc).unwrap();
+            let y_coord = Self::Base::from_bytes(&y_bytes_alloc).unwrap();
+            let point = Self {
+                x: x_coord,
+                y: y_coord,
+                z: Self::Base::one(),
+            };
+
+            assert_eq!(point.is_on_curve().unwrap_u8(), 1_u8);
+
+            point
+        }
+    }
+
+    /// will return the elliptic curve point corresponding to an array of bytes that represent a compressed point.
+    /// we represent it as a a normalized projective curve point (ie, the x and y coordinates are directly the affine coordinates)
+    /// so the z coordinate is always 1.
+    fn from_bytes_compressed(bytes: &[u8]) -> Self {
+        // assert that this is a 34 byte representation since it's compressed
+        assert_eq!(bytes.len(), Self::COMPRESSED_CURVE_POINT_BYTEWIDTH);
+        // first check if it is a point at infinity
+        if bytes[0] == 1_u8 {
+            return Self {
+                x: Self::Base::zero(),
+                y: Self::Base::one(),
+                z: Self::Base::zero(),
+            };
+        } else {
+            let mut x_alloc_bytes = [0_u8; 32];
+            x_alloc_bytes.copy_from_slice(&bytes[1..33]);
+            let y_sign_byte: u8 = bytes[33];
+
+            // y^2 = x^3 + ax + b
+            let x_coord = Self::Base::from_bytes(&x_alloc_bytes).unwrap();
+            let y_square = (x_coord.square() + Self::a()) * x_coord + Self::b();
+            let one_y_sqrt = y_square.sqrt().unwrap();
+
+            // --- Flip y-sign if needed ---
+            let y_coord = if (one_y_sqrt.to_bytes()[0] % 2) ^ y_sign_byte == 0 {
+                one_y_sqrt
+            } else {
+                one_y_sqrt.neg()
+            };
+
+            let point = Self {
+                x: x_coord,
+                y: y_coord,
+                z: Self::Base::one(),
+            };
+
+            point
         }
     }
 }
