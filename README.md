@@ -7,10 +7,10 @@ Note that this repository contains _only_ the code needed to generate a commitme
 
 ## Building
 ### Building using our binary
-To execute our binary, you can run the following command:
+To execute our binary, you can run the following command from the root directory:
 ```
 cargo build --release
-cargo run --release --bin hyrax_commit -- \
+./target/release/hyrax_commit -- \
     --input-normalized-iris-image-filepath {filepath to iris image} \
     --output-commitment-filepath {filepath to write the commitment to} \
     --output-blinding-factors-filepath {filepath to write blinding factors to} \
