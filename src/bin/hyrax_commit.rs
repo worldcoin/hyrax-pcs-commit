@@ -14,7 +14,7 @@ const LOG_IMAGE_SIZE: usize = 17;
 struct Args {
     /// this is the filepath which contains the array of bytes representing the normalized iris image.
     #[arg(long)]
-    input_normalized_iris_image_filepath: String,
+    input_image_filepath: String,
 
     /// this is the filepath to which the commitment to the iris image provided will be written.
     /// NOTE: contents can be decryptable by the backend servers and by the phone
@@ -31,7 +31,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
     // Generate a random image to be committed to; this is a stand-in for the iris image ---
-    let iris_image = read_bytes_from_file(&args.input_normalized_iris_image_filepath);
+    let iris_image = read_bytes_from_file(&args.input_image_filepath);
     // Sanity check on expected image dimensions
     assert_eq!(iris_image.len(), 1 << LOG_IMAGE_SIZE);
 
