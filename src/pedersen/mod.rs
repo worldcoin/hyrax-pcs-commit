@@ -1,4 +1,5 @@
-use crate::curves::Sha3XofReaderWrapper;
+use crate::utils::Sha3XofReaderWrapper;
+
 use super::curves::PrimeOrderCurve;
 use num_traits::PrimInt;
 use sha3::digest::ExtendableOutput;
@@ -24,10 +25,7 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
     /// Post: self.generators.len() == num_generators
     /// TODO(vishady): look at the halo2curves C::random
     /// TODO(vishady): benchmarks on the hash function for rng
-    pub fn new(
-        num_generators: usize,
-        public_string: &str,
-    ) -> Self {
+    pub fn new(num_generators: usize, public_string: &str) -> Self {
         let all_generators = Self::sample_generators(num_generators + 1, public_string);
         let blinding_generator_h = all_generators[0];
         let generators_g_i = all_generators[1..].to_vec();
@@ -77,7 +75,7 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
                 let mut acc = C::zero();
                 bits.into_iter().enumerate().for_each(|(i, bit)| {
                     if bit {
-                        acc += generator_doublings[i];
+                        acc = acc + generator_doublings[i];
                     }
                 });
                 acc

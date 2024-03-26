@@ -2,15 +2,15 @@ pub mod tests;
 
 use super::curves::PrimeOrderCurve;
 use crate::pedersen::PedersenCommitter;
-use halo2_base::halo2_proofs::arithmetic::Field;
-use halo2_base::halo2_proofs::halo2curves::bn256::Fr as Bn256Scalar;
-use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256Point;
-use halo2_base::utils::ScalarField;
+use ark_bn254::Fr as Bn256Scalar;
+use ark_bn254::G1Projective as Bn256Point;
+use ark_ff::BigInteger;
+use ark_ff::PrimeField;
+use ark_ff::UniformRand;
 use itertools::Itertools;
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 use serde::{Deserialize, Serialize};
-
 // log of the number of columns in the re-arrangement of the image as a matrix
 pub const LOG_NUM_COLS: usize = 9;
 // public string used to derive the generators (arbitrary constant)
@@ -63,7 +63,7 @@ pub fn compute_commitments_binary_outputs(
         .collect_vec();
     let blinding_factors_serialized: Vec<u8> = blinding_factors
         .iter()
-        .flat_map(|element| element.to_bytes_le())
+        .flat_map(|element| element.into_bigint().to_bytes_le())
         .collect_vec();
 
     HyraxCommitmentOutputSerialized {
@@ -94,7 +94,7 @@ pub fn compute_commitments<C: PrimeOrderCurve>(
 
     let mut prng = ChaCha20Rng::from_seed(blinding_factor_seed);
     let blinding_factors = (0..n_rows)
-        .map(|_idx| C::Scalar::random(&mut prng))
+        .map(|_idx| C::Scalar::rand(&mut prng))
         .collect_vec();
 
     // we are using the vector_commit to commit to each of the rows of the matrix
@@ -124,7 +124,7 @@ pub fn deserialize_blinding_factors_from_bytes_compressed<C: PrimeOrderCurve>(
 ) -> Vec<C::Scalar> {
     let blinding_factors: Vec<<C as PrimeOrderCurve>::Scalar> = bytes
         .chunks(C::SCALAR_ELEM_BYTEWIDTH)
-        .map(|byte_repr| C::Scalar::from_bytes_le(byte_repr))
+        .map(|byte_repr| C::Scalar::from_le_bytes_mod_order(byte_repr))
         .collect_vec();
     blinding_factors
 }

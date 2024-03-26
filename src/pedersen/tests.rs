@@ -1,50 +1,68 @@
-use super::*;
-use halo2_base::halo2_proofs::halo2curves::bn256::Fr;
-/// Tests for the Pedersen commitment scheme using the BN254 (aka BN256) curve and its scalar field (Fr).
-use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256;
-use super::super::curves::PrimeOrderCurve;
+use crate::iriscode_commit::{LOG_NUM_COLS, PUBLIC_STRING};
 
-type Scalar = <Bn256 as PrimeOrderCurve>::Scalar;
+/// Tests for the Pedersen commitment scheme using the BN254 (aka BN256) curve and its scalar field (Fr).
+use super::super::curves::PrimeOrderCurve;
+use super::*;
+use ark_bn254::Fr as Bn256Scalar;
+use ark_bn254::G1Projective as Bn256Point;
+
+#[test]
+/// tests whether when we run the generator sampling twice we still get the same generators
+fn test_public_sampling() {
+    let vector_committer: PedersenCommitter<Bn256Point> =
+        PedersenCommitter::new(1 << LOG_NUM_COLS, PUBLIC_STRING);
+    let vector_committer_2: PedersenCommitter<Bn256Point> =
+        PedersenCommitter::new(1 << LOG_NUM_COLS, PUBLIC_STRING);
+
+    dbg!(&vector_committer.generators);
+    dbg!(&vector_committer.blinding_generator);
+
+    assert_eq!(vector_committer.generators, vector_committer_2.generators);
+    assert_eq!(
+        vector_committer.blinding_generator,
+        vector_committer_2.blinding_generator
+    );
+}
 
 #[test]
 fn test_commitment_with_random_generators_isnt_identity() {
-    let zero: Scalar = Fr::zero();
-    let identity = Bn256::generator() * zero;
-    let committer: PedersenCommitter<Bn256> =
+    let zero: Bn256Scalar = Bn256Scalar::from(0_u64);
+    let identity = Bn256Point::generator() * zero;
+    let committer: PedersenCommitter<Bn256Point> =
         PedersenCommitter::new(2, "accountable magic something something");
     let message: Vec<u8> = vec![5, 7];
-    let commit = committer.vector_commit(&message, &Fr::from(4u64));
+    let commit = committer.vector_commit(&message, &Bn256Scalar::from(4u64));
     assert!(commit != identity);
 }
 
 #[test]
 fn test_blinding_factor_dependence() {
-    let committer: PedersenCommitter<Bn256> =
+    let committer: PedersenCommitter<Bn256Point> =
         PedersenCommitter::new(2, "accountable magic something something");
     let message: Vec<u8> = vec![5, 7];
-    let commit1 = committer.vector_commit(&message, &Fr::from(4u64));
-    let commit2 = committer.vector_commit(&message, &Fr::from(5u64));
+    let commit1 = committer.vector_commit(&message, &Bn256Scalar::from(4u64));
+    let commit2 = committer.vector_commit(&message, &Bn256Scalar::from(5u64));
     assert!(commit1 != commit2);
 }
 
 #[test]
 #[should_panic]
 fn test_too_long_messages_fail() {
-    let committer: PedersenCommitter<Bn256> =
+    let committer: PedersenCommitter<Bn256Point> =
         PedersenCommitter::new(1, "accountable magic something something");
-    let blinding_factor: Scalar = Fr::from(4u64);
+    let blinding_factor: Bn256Scalar = Bn256Scalar::from(4u64);
     let message: Vec<u8> = vec![5, 7];
     let _commit = committer.vector_commit(&message, &blinding_factor);
 }
 
 #[test]
 fn test_permutation() {
-    let committer: PedersenCommitter<Bn256> =
+    let committer: PedersenCommitter<Bn256Point> =
         PedersenCommitter::new(2, "accountable magic something something");
     // test that permuting the message changes the commitment
     let message: Vec<u8> = vec![5, 7];
     let permuted_message: Vec<u8> = vec![7, 5];
-    let blinding_factor: Scalar = Fr::from(4u64);
+    let blinding_factor: Bn256Scalar = Bn256Scalar::from(4u64);
     let commit = committer.vector_commit(&message, &blinding_factor);
     let permuted_message_commit = committer.vector_commit(&permuted_message, &blinding_factor);
     assert!(commit != permuted_message_commit);
@@ -52,7 +70,7 @@ fn test_permutation() {
 
 #[test]
 fn test_build_powers() {
-    let g = Bn256::generator();
+    let g = Bn256Point::generator();
     let powers = precompute_doublings(g, 3);
     assert_eq!(powers.len(), 3);
     assert_eq!(powers[0], g);

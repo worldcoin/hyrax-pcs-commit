@@ -1,5 +1,5 @@
 use super::*;
-use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256;
+use ark_bn254::G1Projective as Bn256;
 
 fn test_curve_ops<C: PrimeOrderCurve>() {
     let zero = C::zero();

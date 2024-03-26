@@ -1,11 +1,16 @@
-use halo2_base::halo2_proofs::arithmetic::Field;
-use halo2_base::halo2_proofs::halo2curves::{bn256::G1 as Bn256, CurveExt};
-use halo2_base::utils::ScalarField as Halo2Field;
+use ark_bn254::G1Affine as Bn256;
+use ark_bn254::G1Projective as Bn256Point;
+use ark_bn254::{Fq as Bn256Base, Fr as Bn256Scalar};
+use ark_ec::AffineRepr;
+use ark_ff::BigInteger;
+use ark_ff::{Field, PrimeField};
 use itertools::Itertools;
 use rand_core::RngCore;
-use serde::{Deserialize, Serialize};
-use sha3::digest::XofReader;
-use sha3::Sha3XofReader;
+// use serde::{Deserialize, Serialize};
+use ark_ec::CurveGroup;
+use ark_ec::Group;
+use num_traits::One;
+use num_traits::Zero;
 
 #[cfg(test)]
 pub mod tests;
@@ -19,8 +24,6 @@ use std::{
     fmt,
     ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign},
 };
-// Implementation note: do not confuse the following with the very similarly named remainder_shared_types::halo2curves::Group
-use halo2_base::halo2_proofs::halo2curves::group::Group;
 /// Minimal interface for an elliptic curve of prime order.
 pub trait PrimeOrderCurve:
     Copy
@@ -38,14 +41,10 @@ pub trait PrimeOrderCurve:
     + AddAssign<Self>
     + SubAssign<Self>
     + MulAssign<Self::Scalar>
-    + Serialize
-    + for<'de> Deserialize<'de>
 {
-    /// The scalar field of the curve.
-    type Scalar: Halo2Field + Serialize + for<'de> Deserialize<'de>;
-
-    /// The base field of the curve.
-    type Base: Halo2Field + Serialize + for<'de> Deserialize<'de>;
+    type Scalar: PrimeField + Into<<Self::Scalar as PrimeField>::BigInt>;
+    /// The finite field over which this curve is defined.
+    type Base: Field;
 
     /// The byte sizes for the serialized representations.
     const UNCOMPRESSED_CURVE_POINT_BYTEWIDTH: usize;
@@ -55,8 +54,17 @@ pub trait PrimeOrderCurve:
     /// Return the additive identity of the curve.
     fn zero() -> Self;
 
+    /// Return the "a" coordinate of the curve where y^2 = x^3 + ax + b
+    fn a() -> Self::Base;
+
+    /// Return the "b" coordinate of the curve where y^2 = x^3 + ax + b
+    fn b() -> Self::Base;
+
     /// Return the chosen generator of the curve.
     fn generator() -> Self;
+
+    /// Returns a bool determining whether the point is on the curve or not
+    fn is_on_curve(&self) -> bool;
 
     /// Returns an element chosen uniformly at random.
     fn random(rng: impl RngCore) -> Self;
@@ -69,8 +77,6 @@ pub trait PrimeOrderCurve:
 
     /// Return the affine coordinates of the point, if it is not at the identity (in which case, return None).
     fn affine_coordinates(&self) -> Option<(Self::Base, Self::Base)>;
-
-    fn from_random_bytes(bytes: &[u8]) -> Self;
 
     /// Returns an uncompressed byte representation of a curve element.
     fn to_bytes_uncompressed(&self) -> Vec<u8>;
@@ -85,29 +91,69 @@ pub trait PrimeOrderCurve:
     fn from_bytes_compressed(bytes: &[u8]) -> Self;
 }
 
-impl PrimeOrderCurve for Bn256 {
-    type Scalar = <Bn256 as CurveExt>::ScalarExt;
-    type Base = <Bn256 as CurveExt>::Base;
+impl PrimeOrderCurve for Bn256Point {
+    type Scalar = Bn256Scalar;
+    type Base = Bn256Base;
 
     const UNCOMPRESSED_CURVE_POINT_BYTEWIDTH: usize = 65;
     const COMPRESSED_CURVE_POINT_BYTEWIDTH: usize = 34;
     const SCALAR_ELEM_BYTEWIDTH: usize = 32;
 
     fn zero() -> Self {
-        Bn256::identity()
+        Bn256Point::default()
+    }
+
+    fn a() -> Self::Base {
+        Bn256Base::zero()
+    }
+
+    fn b() -> Self::Base {
+        Bn256Base::from(3_u64)
+    }
+
+    fn is_on_curve(&self) -> bool {
+        if self.is_zero() {
+            true
+        } else {
+            let (x, y) = self.affine_coordinates().unwrap();
+            if ((x * x + Bn256Point::a()) * x + Bn256Point::b()) == y {
+                true
+            } else {
+                false
+            }
+        }
     }
 
     fn generator() -> Self {
-        Bn256::generator()
+        Bn256::generator().into()
     }
 
-    fn random(rng: impl RngCore) -> Self {
-        <Bn256 as Group>::random(rng)
-    }
+    fn random(mut rng: impl RngCore) -> Self {
+        // loop until we have a point that is not at infinity
+        loop {
+            let mut random_bytes = [0; 64];
+            rng.fill_bytes(&mut random_bytes[..]);
+            // use the first 512 bytes from the rng in order to sample a base field element reduced by mod
+            let x_coord = Bn256Base::from_le_bytes_mod_order(&random_bytes);
+            // grab the parity we want for the y coordinate in order to determine the unique square root
+            let yparity_wanted = (rng.next_u32() % 2) as u8;
 
-    fn from_random_bytes(bytes: &[u8]) -> Self {
-        let curve_hasher = Bn256::hash_to_curve("hello");
-        curve_hasher(&bytes)
+            // if the point is not at infinity, we can continue
+            if let Some((y_option_1, y_option_2)) = Bn256::get_ys_from_x_unchecked(x_coord) {
+                // return the correct parity y-coordinate
+                let y_option_1_parity = y_option_1.into_bigint().to_bytes_le()[0] & 1;
+                let y_coord = if yparity_wanted ^ y_option_1_parity == 0 {
+                    y_option_1
+                } else {
+                    y_option_2
+                };
+                return Self {
+                    x: x_coord,
+                    y: y_coord,
+                    z: Self::Base::one(),
+                };
+            }
+        }
     }
 
     fn double(&self) -> Self {
@@ -131,11 +177,12 @@ impl PrimeOrderCurve for Bn256 {
         // [formulae for Jacobian coords](https://www.hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html).
         // In more recent versions, the x,y,z are PROJECTIVE coordinates.  So when we upgrade to a more
         // recent version of halo2curves, we will need to change this implementation.
-        if self.z == Self::Base::zero() {
+        if self.is_zero() {
             None
         } else {
-            let z_inv = self.z.invert().unwrap();
-            Some((self.x * z_inv.square(), self.y * z_inv.cube()))
+            let coord = self.into_affine();
+            let (x, y) = (coord.x, coord.y);
+            Some((x, y))
         }
     }
 
@@ -150,8 +197,8 @@ impl PrimeOrderCurve for Bn256 {
         let affine_coords = self.affine_coordinates();
 
         if let Some((x, y)) = affine_coords {
-            let x_bytes = x.to_bytes();
-            let y_bytes = y.to_bytes();
+            let x_bytes = x.into_bigint().to_bytes_le();
+            let y_bytes = y.into_bigint().to_bytes_le();
             let all_bytes = std::iter::once(0_u8)
                 .chain(x_bytes.into_iter())
                 .chain(y_bytes.into_iter())
@@ -176,12 +223,12 @@ impl PrimeOrderCurve for Bn256 {
         let affine_coords = self.affine_coordinates();
 
         if let Some((x, y)) = affine_coords {
-            let x_bytes = x.to_bytes();
+            let x_bytes = x.into_bigint().to_bytes_le();
             // 0 when the square root is even, 1 when the square root is odd. we grab
             // the parity from the most significant byte and taking the & with 1. the
             // two square roots of y in the field always have opposite parity because
             // the field modulus is odd.
-            let y_parity = y.to_bytes()[0] & 1;
+            let y_parity = y.into_bigint().to_bytes_le()[0] & 1;
             let all_bytes = std::iter::once(0_u8)
                 .chain(x_bytes.into_iter())
                 .chain(std::iter::once(y_parity))
@@ -216,15 +263,15 @@ impl PrimeOrderCurve for Bn256 {
             let y_bytes = &bytes[33..];
             y_bytes_alloc.copy_from_slice(y_bytes);
 
-            let x_coord = Self::Base::from_bytes(&x_bytes_alloc).unwrap();
-            let y_coord = Self::Base::from_bytes(&y_bytes_alloc).unwrap();
+            let x_coord = Self::Base::from_le_bytes_mod_order(&x_bytes_alloc);
+            let y_coord = Self::Base::from_le_bytes_mod_order(&y_bytes_alloc);
             let point = Self {
                 x: x_coord,
                 y: y_coord,
                 z: Self::Base::one(),
             };
 
-            assert_eq!(point.is_on_curve().unwrap_u8(), 1_u8);
+            assert!(point.is_on_curve());
 
             point
         }
@@ -244,20 +291,17 @@ impl PrimeOrderCurve for Bn256 {
                 z: Self::Base::zero(),
             };
         } else {
-            let mut x_alloc_bytes = [0_u8; 32];
-            x_alloc_bytes.copy_from_slice(&bytes[1..33]);
             let y_sign_byte: u8 = bytes[33];
 
             // y^2 = x^3 + ax + b
-            let x_coord = Self::Base::from_bytes(&x_alloc_bytes).unwrap();
-            let y_square = (x_coord.square() + Self::a()) * x_coord + Self::b();
-            let one_y_sqrt = y_square.sqrt().unwrap();
+            let x_coord = Self::Base::from_le_bytes_mod_order(&bytes[1..33]);
+            let (y_option_1, y_option_2) = Bn256::get_ys_from_x_unchecked(x_coord).unwrap();
 
             // --- Flip y-sign if needed ---
-            let y_coord = if (one_y_sqrt.to_bytes()[0] % 2) ^ y_sign_byte == 0 {
-                one_y_sqrt
+            let y_coord = if (y_option_1.into_bigint().to_bytes_le()[0] % 2) ^ y_sign_byte == 0 {
+                y_option_1
             } else {
-                one_y_sqrt.neg()
+                y_option_2
             };
 
             let point = Self {
@@ -268,38 +312,5 @@ impl PrimeOrderCurve for Bn256 {
 
             point
         }
-    }
-}
-
-pub struct Sha3XofReaderWrapper {
-    item: Sha3XofReader,
-}
-
-impl Sha3XofReaderWrapper {
-    pub fn new(item: Sha3XofReader) -> Self {
-        Self { item }
-    }
-}
-
-impl RngCore for Sha3XofReaderWrapper {
-    fn next_u32(&mut self) -> u32 {
-        let mut buffer: [u8; 4] = [0; 4];
-        self.item.read(&mut buffer);
-        u32::from_le_bytes(buffer)
-    }
-
-    fn next_u64(&mut self) -> u64 {
-        let mut buffer: [u8; 8] = [0; 8];
-        self.item.read(&mut buffer);
-        u64::from_le_bytes(buffer)
-    }
-
-    fn fill_bytes(&mut self, dest: &mut [u8]) {
-        self.item.read(dest);
-    }
-
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
-        self.item.read(dest);
-        Ok(())
     }
 }

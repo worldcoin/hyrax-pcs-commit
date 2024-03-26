@@ -1,13 +1,9 @@
-use std::fs;
-use std::io::{BufWriter, Read};
-
-use halo2_base::utils::ScalarField;
-
-use crate::curves::PrimeOrderCurve;
 use crate::iriscode_commit::{
     deserialize_blinding_factors_from_bytes_compressed_concrete,
     deserialize_commitment_from_bytes_compressed_concrete,
 };
+use std::fs;
+use std::io::{BufWriter, Read};
 
 /// Helper function for buffered writing to file.
 fn write_bytes_to_file(filename: &str, bytes: &[u8]) {
@@ -33,7 +29,10 @@ fn test_serialize_end_to_end() {
     use crate::pedersen::PedersenCommitter;
     use std::time::Instant;
 
-    use halo2_base::halo2_proofs::halo2curves::bn256::G1 as Bn256Point;
+    use crate::curves::PrimeOrderCurve;
+    use ark_bn254::G1Projective as Bn256Point;
+    use ark_ff::BigInteger;
+    use ark_ff::PrimeField;
     use itertools::Itertools;
     use rand::RngCore;
     use rand_core::OsRng;
@@ -73,7 +72,7 @@ fn test_serialize_end_to_end() {
         .collect_vec();
     let blinding_factors_serialized: Vec<u8> = blinding_factors
         .iter()
-        .flat_map(|element| element.to_bytes_le())
+        .flat_map(|element| element.into_bigint().to_bytes_le())
         .collect_vec();
 
     // --- Sample serialization to file (iris image, blinding factors) ---
