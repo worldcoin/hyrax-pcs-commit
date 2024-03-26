@@ -129,7 +129,7 @@ impl PrimeOrderCurve for Bn256Point {
     }
 
     fn random(mut rng: impl RngCore) -> Self {
-        // loop until we have a point that is not at infinity
+        // loop until we have a point where the y-coord has a valid square root
         loop {
             let mut random_bytes = [0; 64];
             rng.fill_bytes(&mut random_bytes[..]);

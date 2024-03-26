@@ -14,9 +14,6 @@ fn test_public_sampling() {
     let vector_committer_2: PedersenCommitter<Bn256Point> =
         PedersenCommitter::new(1 << LOG_NUM_COLS, PUBLIC_STRING);
 
-    dbg!(&vector_committer.generators);
-    dbg!(&vector_committer.blinding_generator);
-
     assert_eq!(vector_committer.generators, vector_committer_2.generators);
     assert_eq!(
         vector_committer.blinding_generator,
