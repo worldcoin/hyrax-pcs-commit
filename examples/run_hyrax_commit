@@ -1,5 +1,5 @@
 cargo build --release
 cargo run --release --bin hyrax_commit -- \
-    --input-normalized-iris-image-filepath e2etesting/normalized-iris-image-example.json \
+    --input-image-filepath e2etesting/image-example.json \
     --output-commitment-filepath e2etesting/commitment-iris-image-example.json \
     --output-blinding-factors-filepath e2etesting/blinding-factors-iris-image-example.json \
