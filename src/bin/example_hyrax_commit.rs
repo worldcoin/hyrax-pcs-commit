@@ -12,11 +12,11 @@ use std::time::Instant;
 const LOG_IMAGE_SIZE: usize = 17;
 // this is the file that the image is stored in as an array of bytes. in the example
 // function, we create a random "image" and just save this to file.
-const INPUT_NORMALIZED_IMAGE_FILENAME: &str = "arkworks-e2etesting/image-example.json";
+const INPUT_NORMALIZED_IMAGE_FILENAME: &str = "examples/e2etesting/image-example.json";
 // this is the file that the serialized commitment to the iris image is stored in.
-const COMMITMENT_FILENAME: &str = "arkworks-e2etesting/commit-test1.json";
+const COMMITMENT_FILENAME: &str = "examples/e2etesting/commit-test1.json";
 // this is the file that the serialized blinding factors are stored in.
-const BLINDING_FACTORS_FILENAME: &str = "arkworks-e2etesting/bf-test1.json";
+const BLINDING_FACTORS_FILENAME: &str = "examples/e2etesting/bf-test1.json";
 
 /// Helper function for buffered writing to file.
 fn write_bytes_to_file(filename: &str, bytes: &[u8]) {
