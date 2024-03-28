@@ -1,30 +1,13 @@
-use crate::iriscode_commit::{
-    deserialize_blinding_factors_from_bytes_compressed_concrete,
-    deserialize_commitment_from_bytes_compressed_concrete,
-};
-use std::fs;
-use std::io::{BufWriter, Read};
-
-/// Helper function for buffered writing to file.
-fn write_bytes_to_file(filename: &str, bytes: &[u8]) {
-    let file = fs::File::create(filename).unwrap();
-    let bw = BufWriter::new(file);
-    serde_json::to_writer(bw, &bytes).unwrap();
-}
-
-/// Helper function for buffered reading from file.
-fn read_bytes_from_file(filename: &str) -> Vec<u8> {
-    let mut file = std::fs::File::open(filename).unwrap();
-    let initial_buffer_size = file.metadata().map(|m| m.len() as usize + 1).unwrap_or(0);
-    let mut bufreader = Vec::with_capacity(initial_buffer_size);
-    file.read_to_end(&mut bufreader).unwrap();
-    serde_json::de::from_slice(&bufreader[..]).unwrap()
-}
-
 #[test]
 fn test_serialize_end_to_end() {
+    /// Imports
+    use std::fs;
+    use std::io::{BufWriter, Read};
+
     use crate::iriscode_commit::{
-        compute_commitments, HyraxCommitmentOutput, LOG_NUM_COLS, PUBLIC_STRING,
+        compute_commitments, deserialize_blinding_factors_from_bytes_compressed_concrete,
+        deserialize_commitment_from_bytes_compressed_concrete, HyraxCommitmentOutput, LOG_NUM_COLS,
+        PUBLIC_STRING,
     };
     use crate::pedersen::PedersenCommitter;
     use std::time::Instant;
@@ -36,6 +19,22 @@ fn test_serialize_end_to_end() {
     use itertools::Itertools;
     use rand::RngCore;
     use rand_core::OsRng;
+
+    /// Helper function for buffered writing to file.
+    fn write_bytes_to_file(filename: &str, bytes: &[u8]) {
+        let file = fs::File::create(filename).unwrap();
+        let bw = BufWriter::new(file);
+        serde_json::to_writer(bw, &bytes).unwrap();
+    }
+
+    /// Helper function for buffered reading from file.
+    fn read_bytes_from_file(filename: &str) -> Vec<u8> {
+        let mut file = std::fs::File::open(filename).unwrap();
+        let initial_buffer_size = file.metadata().map(|m| m.len() as usize + 1).unwrap_or(0);
+        let mut bufreader = Vec::with_capacity(initial_buffer_size);
+        file.read_to_end(&mut bufreader).unwrap();
+        serde_json::de::from_slice(&bufreader[..]).unwrap()
+    }
 
     // image is 128 x 1024 = 2^17 in size
     const LOG_IMAGE_SIZE: usize = 17;
