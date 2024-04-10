@@ -86,11 +86,16 @@ pub fn compute_commitments<C: PrimeOrderCurve>(
     vector_committer: &PedersenCommitter<C>,
     blinding_factor_seed: [u8; 32],
 ) -> HyraxCommitmentOutput<C> {
-    assert!(data.len().is_power_of_two());
+    // pad the data to the nearest power of 2 by appending 0s
+    let nearest_power_of_2_len = data.len().next_power_of_two();
+    let padding_amount = nearest_power_of_2_len - data.len();
+    let mut data_vec = data.to_vec();
+    let padding_vec = vec![0; padding_amount];
+    data_vec.extend(padding_vec.iter());
 
     // calculate the number of blinding factors needed (=the number of rows in the matrix)
     let n_cols = vector_committer.generators.len();
-    let n_rows = data.len() / n_cols;
+    let n_rows = data_vec.len() / n_cols;
 
     let mut prng = ChaCha20Rng::from_seed(blinding_factor_seed);
     let blinding_factors = (0..n_rows)
@@ -98,7 +103,7 @@ pub fn compute_commitments<C: PrimeOrderCurve>(
         .collect_vec();
 
     // we are using the vector_commit to commit to each of the rows of the matrix
-    let row_chunks = data.chunks(n_cols);
+    let row_chunks = data_vec.chunks(n_cols);
     let commitment = row_chunks
         .zip(blinding_factors.iter())
         .map(|(chunk, blind)| vector_committer.vector_commit(&chunk, blind))
