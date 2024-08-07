@@ -34,3 +34,7 @@ path = "src/bin/hyrax_commit.rs"
 [[bin]]
 name = "example_hyrax_commit"
 path = "src/bin/example_hyrax_commit.rs"
+
+[[bin]]
+name = "serialize_generators"
+path = "src/bin/serialize_generators.rs"
