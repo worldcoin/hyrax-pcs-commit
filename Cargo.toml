@@ -3,6 +3,7 @@ name = "hyrax"
 version = "0.0.0"
 repository = "https://github.com/worldcoin/remainder-hyrax-tfh"
 edition = "2021"
+license = "MIT OR (Apache-2.0 WITH LLVM-exception)"
 publish = false
 
 [dependencies]
