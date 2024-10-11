@@ -1,7 +1,9 @@
 [package]
 name = "hyrax"
-version = "0.1.0"
+version = "0.0.0"
+repository = "https://github.com/worldcoin/remainder-hyrax-tfh"
 edition = "2021"
+publish = false
 
 [dependencies]
 itertools = "0.11.0"
