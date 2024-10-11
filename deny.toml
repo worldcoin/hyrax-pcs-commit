@@ -28,7 +28,6 @@ allow = [
     "CC0-1.0",
     "ISC",
     "LicenseRef-ring",
-    "LicenseRef-wc-proprietary",
     "MIT",
     "MPL-2.0", # Although this is copyleft, it is scoped to modifying the original files
     "OpenSSL",
@@ -43,11 +42,4 @@ name = "ring"
 expression = "LicenseRef-ring"
 license-files = [
     { path = "LICENSE", hash = 0xbd0eed23 },
-]
-
-[[licenses.clarify]]
-name = "hyrax"
-expression = "LicenseRef-wc-proprietary"
-license-files = [
-	{ path = "LICENSE", hash = 0xeafa4d94 }
 ]

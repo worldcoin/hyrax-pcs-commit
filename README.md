@@ -39,3 +39,16 @@ We generate blinding factors by taking as input a random seed of 32 bytes (e.g.,
 
 ## Public Generator Setup
 We sample the generators for the Pedersen commitment deterministically using the Shake256 hash function which uses a public string as an initializer. This can be found under the `sample_generators` function in `./src/pedersen/mod.rs`. The public string (once used, this _must_ be fixed) can be found as the constant `PUBLIC_STRING` within `src/iriscode_commit/mod.rs`. 
+
+## License
+Unless otherwise specified, all code in this repository is dual-licensed under
+either:
+
+- MIT License ([LICENSE-MIT](LICENSE-MIT))
+- Apache License, Version 2.0, with LLVM Exceptions ([LICENSE-APACHE](LICENSE-APACHE))
+
+at your option. This means you may select the license you prefer to use.
+
+Any contribution intentionally submitted for inclusion in the work by you, as
+defined in the Apache-2.0 license, shall be dual licensed as above, without any
+additional terms or conditions.
