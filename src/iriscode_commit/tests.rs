@@ -1,9 +1,6 @@
 #[test]
 fn test_serialize_end_to_end() {
-    /// Imports
-    use std::fs;
-    use std::io::{BufWriter, Read};
-
+    use crate::utils::{read_bytes_from_file, write_bytes_to_file, INPUT_NORMALIZED_IMAGE_FILENAME, COMMITMENT_FILENAME, BLINDING_FACTORS_FILENAME};
     use crate::iriscode_commit::{
         compute_commitments, deserialize_blinding_factors_from_bytes_compressed_concrete,
         deserialize_commitment_from_bytes_compressed_concrete, HyraxCommitmentOutput, LOG_NUM_COLS,
@@ -20,31 +17,8 @@ fn test_serialize_end_to_end() {
     use rand::RngCore;
     use rand_core::OsRng;
 
-    /// Helper function for buffered writing to file.
-    fn write_bytes_to_file(filename: &str, bytes: &[u8]) {
-        let file = fs::File::create(filename).unwrap();
-        let bw = BufWriter::new(file);
-        serde_json::to_writer(bw, &bytes).unwrap();
-    }
-
-    /// Helper function for buffered reading from file.
-    fn read_bytes_from_file(filename: &str) -> Vec<u8> {
-        let mut file = std::fs::File::open(filename).unwrap();
-        let initial_buffer_size = file.metadata().map(|m| m.len() as usize + 1).unwrap_or(0);
-        let mut bufreader = Vec::with_capacity(initial_buffer_size);
-        file.read_to_end(&mut bufreader).unwrap();
-        serde_json::de::from_slice(&bufreader[..]).unwrap()
-    }
-
-    // image is 128 x 1024 = 2^17 in size
-    const LOG_IMAGE_SIZE: usize = 17;
-    const TEST_COMMITMENT_FILENAME: &str = "test-commitment-iris-image.json";
-    const TEST_BLINDING_FACTORS_FILENAME: &str = "test-blinding-factors-iris-image.json";
-
-    // --- Generate a random image to be committed to; this is a stand-in for the iris image ---
-    let iris_image = (0..1 << LOG_IMAGE_SIZE)
-        .map(|_| rand::random::<u8>())
-        .collect_vec();
+    // Read a dummy image from file
+    let iris_image = read_bytes_from_file(INPUT_NORMALIZED_IMAGE_FILENAME);
 
     let start_time = Instant::now();
 
@@ -75,12 +49,12 @@ fn test_serialize_end_to_end() {
         .collect_vec();
 
     // --- Sample serialization to file (iris image, blinding factors) ---
-    write_bytes_to_file(TEST_COMMITMENT_FILENAME, &commitment_serialized);
-    write_bytes_to_file(TEST_BLINDING_FACTORS_FILENAME, &blinding_factors_serialized);
+    write_bytes_to_file(COMMITMENT_FILENAME, &commitment_serialized);
+    write_bytes_to_file(BLINDING_FACTORS_FILENAME, &blinding_factors_serialized);
 
     // --- Sample serialization from file (iris image, blinding factors) ---
-    let commitment_bytes_from_file = read_bytes_from_file(TEST_COMMITMENT_FILENAME);
-    let blinding_factors_bytes_from_file = read_bytes_from_file(TEST_BLINDING_FACTORS_FILENAME);
+    let commitment_bytes_from_file = read_bytes_from_file(COMMITMENT_FILENAME);
+    let blinding_factors_bytes_from_file = read_bytes_from_file(BLINDING_FACTORS_FILENAME);
 
     // --- Sanitycheck vs. bytes ---
     assert_eq!(commitment_serialized, commitment_bytes_from_file);

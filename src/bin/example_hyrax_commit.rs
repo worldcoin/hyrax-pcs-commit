@@ -1,47 +1,15 @@
 /// Measure how long it takes to commit to the Worldcoin iris image.
 /// Random u8 values are used as a stand in for the normalized iris image.
 use hyrax::iriscode_commit::{compute_commitments_binary_outputs, HyraxCommitmentOutputSerialized};
-use itertools::Itertools;
+use hyrax::utils::{read_bytes_from_file, write_bytes_to_file, INPUT_NORMALIZED_IMAGE_FILENAME, COMMITMENT_FILENAME, BLINDING_FACTORS_FILENAME};
 use rand::RngCore;
 use rand_core::OsRng;
-use std::fs;
-use std::io::{BufWriter, Read};
 use std::time::Instant;
-
-// image is 128 x 1024 = 2^17 in size
-const LOG_IMAGE_SIZE: usize = 17;
-// this is the file that the image is stored in as an array of bytes. in the example
-// function, we create a random "image" and just save this to file.
-const INPUT_NORMALIZED_IMAGE_FILENAME: &str = "examples/e2etesting/image-example.json";
-// this is the file that the serialized commitment to the iris image is stored in.
-const COMMITMENT_FILENAME: &str = "examples/e2etesting/commit-test1.json";
-// this is the file that the serialized blinding factors are stored in.
-const BLINDING_FACTORS_FILENAME: &str = "examples/e2etesting/bf-test1.json";
-
-/// Helper function for buffered writing to file.
-fn write_bytes_to_file(filename: &str, bytes: &[u8]) {
-    let file = fs::File::create(filename).unwrap();
-    let bw = BufWriter::new(file);
-    serde_json::to_writer(bw, &bytes).unwrap();
-}
-
-/// Helper function for buffered reading from file.
-fn read_bytes_from_file(filename: &str) -> Vec<u8> {
-    let mut file = std::fs::File::open(filename).unwrap();
-    let initial_buffer_size = file.metadata().map(|m| m.len() as usize + 1).unwrap_or(0);
-    let mut bufreader = Vec::with_capacity(initial_buffer_size);
-    file.read_to_end(&mut bufreader).unwrap();
-    serde_json::de::from_slice(&bufreader[..]).unwrap()
-}
 
 /// Usage: `cargo run --release` from this directory (remainder-hyrax-tfh/hyrax/src/bin)
 fn main() {
-    // Generate a random image to be committed to; this is a stand-in for the iris image ---
-    let iris_image = (0..1 << LOG_IMAGE_SIZE)
-        .map(|_| rand::random::<u8>())
-        .collect_vec();
-
-    write_bytes_to_file(INPUT_NORMALIZED_IMAGE_FILENAME, &iris_image);
+    // Read a dummy image from file
+    let iris_image = read_bytes_from_file(INPUT_NORMALIZED_IMAGE_FILENAME);
 
     let start_time = Instant::now();
 

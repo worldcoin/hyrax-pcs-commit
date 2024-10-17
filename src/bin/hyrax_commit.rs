@@ -6,8 +6,8 @@ use hyrax::utils::{read_bytes_from_file, write_bytes_to_file};
 use rand::RngCore;
 use rand_core::OsRng;
 
-// image is 128 x 1024 = 2^17 in size
-const LOG_IMAGE_SIZE: usize = 17;
+const V2_IMAGE_SIZE: usize = 100 * 400;
+const V3_IMAGE_SIZE: usize = 128 * 1024;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -33,7 +33,7 @@ fn main() {
     // Generate a random image to be committed to; this is a stand-in for the iris image ---
     let iris_image = read_bytes_from_file(&args.input_image_filepath);
     // Sanity check on expected image dimensions
-    assert_eq!(iris_image.len(), 1 << LOG_IMAGE_SIZE);
+    assert!((iris_image.len() == V2_IMAGE_SIZE) || (iris_image.len() == V3_IMAGE_SIZE));
 
     // Sample randomness for the generation of the blinding factors (note that `OsRng` calls `/dev/urandom` under the hood)
     let mut seed = [0u8; 32];
