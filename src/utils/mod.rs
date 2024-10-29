@@ -8,7 +8,8 @@ pub const INPUT_NORMALIZED_IMAGE_FILENAME: &str = "examples/dummy-data/left_norm
 /// The file that the serialized commitment to the iris image is stored in.
 pub const COMMITMENT_FILENAME: &str = "examples/dummy-data/left_normalized_image_commitment.bin";
 /// The file that the serialized blinding factors are stored in.
-pub const BLINDING_FACTORS_FILENAME: &str = "examples/dummy-data/left_normalized_image_blinding_factors.bin";
+pub const BLINDING_FACTORS_FILENAME: &str =
+    "examples/dummy-data/left_normalized_image_blinding_factors.bin";
 
 use rand::RngCore;
 use sha3::digest::XofReader;

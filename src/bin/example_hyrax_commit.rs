@@ -1,7 +1,10 @@
 /// Measure how long it takes to commit to the Worldcoin iris image.
 /// Random u8 values are used as a stand in for the normalized iris image.
 use hyrax::iriscode_commit::{compute_commitments_binary_outputs, HyraxCommitmentOutputSerialized};
-use hyrax::utils::{read_bytes_from_file, write_bytes_to_file, INPUT_NORMALIZED_IMAGE_FILENAME, COMMITMENT_FILENAME, BLINDING_FACTORS_FILENAME};
+use hyrax::utils::{
+    read_bytes_from_file, write_bytes_to_file, BLINDING_FACTORS_FILENAME, COMMITMENT_FILENAME,
+    INPUT_NORMALIZED_IMAGE_FILENAME,
+};
 use rand::RngCore;
 use rand_core::OsRng;
 use std::time::Instant;

@@ -1,12 +1,15 @@
 #[test]
 fn test_serialize_end_to_end() {
-    use crate::utils::{read_bytes_from_file, write_bytes_to_file, INPUT_NORMALIZED_IMAGE_FILENAME, COMMITMENT_FILENAME, BLINDING_FACTORS_FILENAME};
     use crate::iriscode_commit::{
         compute_commitments, deserialize_blinding_factors_from_bytes_compressed_concrete,
         deserialize_commitment_from_bytes_compressed_concrete, HyraxCommitmentOutput, LOG_NUM_COLS,
         PUBLIC_STRING,
     };
     use crate::pedersen::PedersenCommitter;
+    use crate::utils::{
+        read_bytes_from_file, write_bytes_to_file, BLINDING_FACTORS_FILENAME, COMMITMENT_FILENAME,
+        INPUT_NORMALIZED_IMAGE_FILENAME,
+    };
     use std::time::Instant;
 
     use crate::curves::PrimeOrderCurve;
