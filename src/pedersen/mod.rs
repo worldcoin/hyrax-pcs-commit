@@ -75,7 +75,7 @@ impl<C: PrimeOrderCurve> PedersenCommitter<C> {
                 let mut acc = C::zero();
                 bits.into_iter().enumerate().for_each(|(i, bit)| {
                     if bit {
-                        acc = acc + generator_doublings[i];
+                        acc += generator_doublings[i];
                     }
                 });
                 acc

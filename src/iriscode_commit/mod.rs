@@ -18,10 +18,10 @@ pub const PUBLIC_STRING: &str = "Modulus <3 Worldcoin: ZKML Self-Custody Edition
 
 /// The Hyrax polynomial commitment scheme returns two things:
 /// * The `commitment` itself, to be signed by the Orb and sent to Worldcoin's
-/// backend (i.e. the verifier), and
+///     backend (i.e. the verifier), and
 /// * The `blinding_factors`, to be sent in the clear to ONLY the user's device
-/// (leaking these to anyone else will cause the commitment to leak information
-/// about the user's iris scan)
+///     (leaking these to anyone else will cause the commitment to leak information
+///     about the user's iris scan)
 pub struct HyraxCommitmentOutput<C: PrimeOrderCurve> {
     pub commitment: Vec<C>,
     pub blinding_factors: Vec<C::Scalar>,
@@ -106,7 +106,7 @@ pub fn compute_commitments<C: PrimeOrderCurve>(
     let row_chunks = data_vec.chunks(n_cols);
     let commitment = row_chunks
         .zip(blinding_factors.iter())
-        .map(|(chunk, blind)| vector_committer.vector_commit(&chunk, blind))
+        .map(|(chunk, blind)| vector_committer.vector_commit(chunk, blind))
         .collect_vec();
 
     HyraxCommitmentOutput {
@@ -129,7 +129,7 @@ pub fn deserialize_blinding_factors_from_bytes_compressed<C: PrimeOrderCurve>(
 ) -> Vec<C::Scalar> {
     let blinding_factors: Vec<<C as PrimeOrderCurve>::Scalar> = bytes
         .chunks(C::SCALAR_ELEM_BYTEWIDTH)
-        .map(|byte_repr| C::Scalar::from_le_bytes_mod_order(byte_repr))
+        .map(C::Scalar::from_le_bytes_mod_order)
         .collect_vec();
     blinding_factors
 }

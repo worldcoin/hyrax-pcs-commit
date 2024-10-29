@@ -116,11 +116,7 @@ impl PrimeOrderCurve for Bn256Point {
             true
         } else {
             let (x, y) = self.affine_coordinates().unwrap();
-            if ((x * x + Bn256Point::a()) * x + Bn256Point::b()) == y {
-                true
-            } else {
-                false
-            }
+            ((x * x + Bn256Point::a()) * x + Bn256Point::b()) == y
         }
     }
 
@@ -157,7 +153,7 @@ impl PrimeOrderCurve for Bn256Point {
     }
 
     fn double(&self) -> Self {
-        Group::double(&self)
+        Group::double(self)
     }
 
     fn projective_coordinates(&self) -> (Self::Base, Self::Base, Self::Base) {
@@ -189,7 +185,7 @@ impl PrimeOrderCurve for Bn256Point {
     /// The bytestring representation of the BN256 curve is a `[u8; 65]` with
     /// the following semantic representation:
     /// * The first `u8` byte represents whether the point is a point at
-    /// infinity (in affine coordinates). 1 if it is at infinity, 0 otherwise.
+    ///     infinity (in affine coordinates). 1 if it is at infinity, 0 otherwise.
     /// * The next 32 `u8` bytes represent the x-coordinate of the point in little endian.
     /// * The next 32 `u8` bytes represent the y-coordinate of the point in little endian.
     fn to_bytes_uncompressed(&self) -> Vec<u8> {
@@ -200,24 +196,24 @@ impl PrimeOrderCurve for Bn256Point {
             let x_bytes = x.into_bigint().to_bytes_le();
             let y_bytes = y.into_bigint().to_bytes_le();
             let all_bytes = std::iter::once(0_u8)
-                .chain(x_bytes.into_iter())
-                .chain(y_bytes.into_iter())
+                .chain(x_bytes)
+                .chain(y_bytes)
                 .collect_vec();
             assert_eq!(all_bytes.len(), Self::UNCOMPRESSED_CURVE_POINT_BYTEWIDTH);
             all_bytes
         } else {
             // --- Point at infinity ---
-            return [1_u8; 65].to_vec();
+            [1_u8; 65].to_vec()
         }
     }
 
     /// The bytestring representation of the BN256 curve is a `[u8; 34]` with
     /// the following semantic representation:
     /// * The first `u8` byte represents whether the point is a point at
-    /// infinity (in affine coordinates).
+    ///     infinity (in affine coordinates).
     /// * The next 32 `u8` bytes represent the x-coordinate of the point in little endian.
     /// * The final `u8` byte represents the sign of the y-coordinate of the
-    /// point.
+    ///     point.
     fn to_bytes_compressed(&self) -> Vec<u8> {
         // --- First get the affine coordinates. If `None`, we have a point at infinity. ---
         let affine_coords = self.affine_coordinates();
@@ -230,14 +226,14 @@ impl PrimeOrderCurve for Bn256Point {
             // the field modulus is odd.
             let y_parity = y.into_bigint().to_bytes_le()[0] & 1;
             let all_bytes = std::iter::once(0_u8)
-                .chain(x_bytes.into_iter())
+                .chain(x_bytes)
                 .chain(std::iter::once(y_parity))
                 .collect_vec();
             assert_eq!(all_bytes.len(), Self::COMPRESSED_CURVE_POINT_BYTEWIDTH);
             all_bytes
         } else {
             // --- Point at infinity ---
-            return [1_u8; 34].to_vec();
+            [1_u8; 34].to_vec()
         }
     }
 
@@ -249,11 +245,11 @@ impl PrimeOrderCurve for Bn256Point {
         assert_eq!(bytes.len(), Self::UNCOMPRESSED_CURVE_POINT_BYTEWIDTH);
         // first check if it is a point at infinity
         if bytes[0] == 1_u8 {
-            return Self {
+            Self {
                 x: Self::Base::zero(),
                 y: Self::Base::one(),
                 z: Self::Base::zero(),
-            };
+            }
         } else {
             let mut x_bytes_alloc = [0_u8; 32];
             let x_bytes = &bytes[1..33];
@@ -285,11 +281,11 @@ impl PrimeOrderCurve for Bn256Point {
         assert_eq!(bytes.len(), Self::COMPRESSED_CURVE_POINT_BYTEWIDTH);
         // first check if it is a point at infinity
         if bytes[0] == 1_u8 {
-            return Self {
+            Self {
                 x: Self::Base::zero(),
                 y: Self::Base::one(),
                 z: Self::Base::zero(),
-            };
+            }
         } else {
             let y_sign_byte: u8 = bytes[33];
 
@@ -304,13 +300,11 @@ impl PrimeOrderCurve for Bn256Point {
                 y_option_2
             };
 
-            let point = Self {
+            Self {
                 x: x_coord,
                 y: y_coord,
                 z: Self::Base::one(),
-            };
-
-            point
+            }
         }
     }
 }
