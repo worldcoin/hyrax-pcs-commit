@@ -1,5 +1,9 @@
 cargo build --release
-cargo run --release --bin hyrax_commit -- \
-    --input-image-filepath e2etesting/image-example.json \
-    --output-commitment-filepath e2etesting/commitment-iris-image-example.json \
-    --output-blinding-factors-filepath e2etesting/blinding-factors-iris-image-example.json \
+for suffix in "" "_resized"; do
+    for type in "image" "mask"; do
+        cargo run --release --bin hyrax_commit -- \
+            --input-image-filepath dummy-data/left_normalized_${type}${suffix}.bin \
+            --output-commitment-filepath dummy-data/left_normalized_${type}_commitment${suffix}.bin \
+            --output-blinding-factors-filepath dummy-data/left_normalized_${type}_blinding_factors${suffix}.bin
+    done
+done

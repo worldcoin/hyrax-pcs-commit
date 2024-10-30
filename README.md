@@ -10,9 +10,9 @@ Note that this repository contains _only_ the code needed to generate a commitme
 To run the built-in example through our library, run `cargo run --release --bin example_hyrax_commit`. The `main` function computes the commitment to a mock iris image of size 2^17 (=128 x 1024). It also demonstrates binary serialization/deserialization, and writes/reads the byte stream to/from file.
 
 ### Example binary usage 
-In `./examples`, we've included a shell script `run_hyrax_commit` which will execute our binary using a random iris image found in `./examples/e2etesting/normalized-iris-image.json`. You can generate the commitment
+In `./examples`, we've included a shell script `run_hyrax_commit` which will execute our binary using a dummy image found in `./examples/dummy-data/left_normalized_image.bin`. You can generate the commitment
 and blinding factors for this commitment and write them to file by running `./run_hyrax_commit` within the
-`./examples` directory. The commitment will get written to `./examples/e2etesting/commitment-iris-image-example.json` and the blinding factors will get written to `e2etesting/blinding-factors-iris-image-example.json`.
+`./examples` directory. The commitment will get written to `./examples/dummy-data/left_normalized_image_commitment.bin` and the blinding factors will get written to `dummy-data/left_normalized_image_blinding_factors.bin`.
 
 ## Production Usage
 The primary user-friendly function can be found in `./src/iriscode_commit/mod.rs` as the `compute_commitments_binary_outputs` function. The function takes in as input
